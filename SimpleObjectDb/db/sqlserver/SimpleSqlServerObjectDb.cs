@@ -18,23 +18,20 @@ public class SimpleSqlServerObjectDb : ISimpleObjectDb
     {
         _connectionString = connectionString;
         _configuration = configuration;
-
-        Directory.CreateDirectory(_connectionString);
     }
 
     public async Task CreateAsync<Tdata>(Tdata data) where Tdata : class
     {
         var id = _configuration.GetIdFromData(data);
         var json = JsonSerializer.Serialize(data);
+        string sql = $"INSERT INTO {GetTableName<Tdata>()} (Id, Data) values(@id, @data)";
 
         try
         {
-            SqlConnection connection = new SqlConnection(_connectionString);
+            using var connection = new SqlConnection(_connectionString);
             connection.Open();
-            string sql = "INSERT INTO Objects (Id, Type, Data) values(@id, @type, @data)";
-            SqlCommand cmd = new SqlCommand(sql, connection);
+            var cmd = new SqlCommand(sql, connection);
             cmd.Parameters.AddWithValue("id", id.ToString());
-            cmd.Parameters.AddWithValue("type", typeof(Tdata).Name);
             cmd.Parameters.AddWithValue("data", json);
             await cmd.ExecuteNonQueryAsync();
             connection.Close();
@@ -49,15 +46,14 @@ public class SimpleSqlServerObjectDb : ISimpleObjectDb
     {
         var id = _configuration.GetIdFromData(data);
         var json = JsonSerializer.Serialize(data);
+        string sql = $"UPDATE {GetTableName<Tdata>()} SET Data = @data WHERE Id = @id";
 
         try
         {
-            SqlConnection connection = new SqlConnection(_connectionString);
+            using var connection = new SqlConnection(_connectionString);
             connection.Open();
-            string sql = "UPDATE Objects SET Data = @data WHERE Type = @type AND Id = @id";
-            SqlCommand cmd = new SqlCommand(sql, connection);
+            var cmd = new SqlCommand(sql, connection);
             cmd.Parameters.AddWithValue("id", id.ToString());
-            cmd.Parameters.AddWithValue("type", typeof(Tdata).Name);
             cmd.Parameters.AddWithValue("data", json);
             await cmd.ExecuteNonQueryAsync();
             connection.Close();
@@ -70,19 +66,21 @@ public class SimpleSqlServerObjectDb : ISimpleObjectDb
 
     public async Task<Tdata?> GetByIdAsync<Tdata>(object id) where Tdata : class
     {
+        string sql = $"SELECT Data FROM {GetTableName<Tdata>()} WHERE Id = @id";
+        string json = "";
+
         try
         {
-            SqlConnection connection = new SqlConnection(_connectionString);
+            using var connection = new SqlConnection(_connectionString);
             connection.Open();
-            string sql = "SELECT Data FROM Objects WHERE Type = @type AND Id = @id";
-            SqlCommand cmd = new SqlCommand(sql, connection);
+            var cmd = new SqlCommand(sql, connection);
             cmd.Parameters.AddWithValue("id", id.ToString());
-            cmd.Parameters.AddWithValue("type", typeof(Tdata).Name);
-            var reader = await cmd.ExecuteReaderAsync();
-            string json = "";
-            while (reader.Read())
+            using (var reader = await cmd.ExecuteReaderAsync())
             {
-                json = reader.GetString(0);
+                while (reader.Read())
+                {
+                    json = reader.GetString(0);
+                }
             }
             connection.Close();
             if (string.IsNullOrEmpty(json))
@@ -101,19 +99,20 @@ public class SimpleSqlServerObjectDb : ISimpleObjectDb
     public async IAsyncEnumerable<Tdata> GetAllAsync<Tdata>() where Tdata : class
     {
         List<string> jsonObjects = new List<string>();
+        string sql = $"SELECT Data FROM {GetTableName<Tdata>()}";
 
         try
         {
-            SqlConnection connection = new SqlConnection(_connectionString);
+            using var connection = new SqlConnection(_connectionString);
             connection.Open();
-            string sql = "SELECT Data FROM Objects WHERE Type = @type";
-            SqlCommand cmd = new SqlCommand(sql, connection);
-            cmd.Parameters.AddWithValue("type", typeof(Tdata).Name);
-            var reader = await cmd.ExecuteReaderAsync();
-            while (reader.Read())
+            var cmd = new SqlCommand(sql, connection);
+            using (var reader = await cmd.ExecuteReaderAsync())
             {
-                var json = reader.GetString(0);
-                jsonObjects.Add(json);
+                while (reader.Read())
+                {
+                    var json = reader.GetString(0);
+                    jsonObjects.Add(json);
+                }
             }
             connection.Close();
         }
@@ -134,14 +133,14 @@ public class SimpleSqlServerObjectDb : ISimpleObjectDb
 
     public async Task DeleteByIdAsync<Tdata>(object id) where Tdata : class
     {
+        string sql = $"DELETE FROM {GetTableName<Tdata>()} WHERE Id = @id";
+
         try
         {
-            SqlConnection connection = new SqlConnection(_connectionString);
+            using var connection = new SqlConnection(_connectionString);
             connection.Open();
-            string sql = "DELETE FROM Objects WHERE Type = @type AND Id = @id";
-            SqlCommand cmd = new SqlCommand(sql, connection);
+            var cmd = new SqlCommand(sql, connection);
             cmd.Parameters.AddWithValue("id", id.ToString());
-            cmd.Parameters.AddWithValue("type", typeof(Tdata).Name);
             await cmd.ExecuteNonQueryAsync();
             connection.Close();
         }
@@ -151,7 +150,12 @@ public class SimpleSqlServerObjectDb : ISimpleObjectDb
         }
     }
 
-    public static void CreateIfNotExist(string connectionString)
+    private string GetTableName<Tdata>()
+    {
+        return typeof(Tdata).Name;
+    }
+
+    public static void CreateIfNotExist(string connectionString, SimpleObjectDbConfiguration configuration)
     {
         var connectionProperties = connectionString
             .Split(';')
@@ -175,17 +179,18 @@ public class SimpleSqlServerObjectDb : ISimpleObjectDb
 
         CreateDatabaseIfNotExists(connectionStringWithoutDatabase, databaseName);
 
-        CreateTablesIfNotExists(connectionString, "Objects");
+        CreateTablesIfNotExists(connectionString, configuration.IdConverters.Select(x => x.Key.Name).ToArray());
     }
     
     private static void CreateDatabaseIfNotExists(string connectionString, string databaseName)
     {
         try
         {
-            SqlConnection connection = new SqlConnection(connectionString);
+            using var connection = new SqlConnection(connectionString);
             connection.Open();
-            string sql = $"IF NOT EXISTS(SELECT * FROM sys.databases WHERE name = '{databaseName}')\r\nCREATE DATABASE [{databaseName}]";
-            SqlCommand cmd = new SqlCommand(sql, connection);
+            var sql = $@"IF NOT EXISTS(SELECT * FROM sys.databases WHERE name = '{databaseName}')
+                         CREATE DATABASE [{databaseName}]";
+            var cmd = new SqlCommand(sql, connection);
             cmd.ExecuteNonQuery();
             connection.Close();
         }
@@ -199,12 +204,17 @@ public class SimpleSqlServerObjectDb : ISimpleObjectDb
     {
         try
         {
-            SqlConnection connection = new SqlConnection(connectionString);
+            using var connection = new SqlConnection(connectionString);
             connection.Open();
-            foreach (string tableName in tableNames)
+            foreach (var tableName in tableNames)
             {
-                string sql = $"IF OBJECT_ID(N'dbo.{tableName}', N'U') IS NULL\r\nCREATE TABLE dbo.{tableName} (Id varchar(50), Type varchar(100), Data varchar(MAX));";
-                SqlCommand cmd = new SqlCommand(sql, connection);
+                string sql = $@"IF OBJECT_ID(N'dbo.{tableName}', N'U') IS NULL
+                                CREATE TABLE dbo.{tableName} (
+                                    Id varchar(50), 
+                                    Data varchar(MAX),
+                                    PRIMARY KEY (Id)
+                                );";
+                var cmd = new SqlCommand(sql, connection);
                 cmd.ExecuteNonQuery();
             }
             connection.Close();

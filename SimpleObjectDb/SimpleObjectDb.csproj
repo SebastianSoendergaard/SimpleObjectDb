@@ -16,10 +16,4 @@
     <Folder Include="db\postgresql\" />
   </ItemGroup>
 
-  <ItemGroup>
-    <None Update="db\sqlserver\create.sql">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
-
 </Project>

@@ -1,5 +1,4 @@
-﻿// See https://aka.ms/new-console-template for more information
-using AutoFixture;
+﻿using AutoFixture;
 using SimpleFileDatabase;
 using SimpleObjectDb.db.file;
 using System.Diagnostics;
@@ -14,7 +13,7 @@ config.RegisterDataType<TestObjectA>(i => i.Id);
 //ISimpleObjectDb db = new SimpleFileObjectDb(@"C:\Temp\SimpleObjectDb\", config);
 
 string sqlServerConnectionString = @"Server=localhost,9001;Database=SimpleObjectDb;User Id=sa;Password=Passw0rd;Pooling=true;TrustServerCertificate=True;";
-SimpleSqlServerObjectDb.CreateIfNotExist(sqlServerConnectionString);
+SimpleSqlServerObjectDb.CreateIfNotExist(sqlServerConnectionString, config);
 ISimpleObjectDb db = new SimpleSqlServerObjectDb(sqlServerConnectionString, config);
 
 
