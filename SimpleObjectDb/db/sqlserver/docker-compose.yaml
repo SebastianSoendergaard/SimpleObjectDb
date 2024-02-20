@@ -1,0 +1,9 @@
+services:
+
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      ACCEPT_EULA: Y
+      SA_PASSWORD: Passw0rd
+    ports: 
+      - "9001:1433"
