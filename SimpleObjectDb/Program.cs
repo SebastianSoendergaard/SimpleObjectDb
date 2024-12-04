@@ -13,9 +13,13 @@ config.RegisterDataType<TestObjectB>(i => i.Id);
 
 //ISimpleObjectDb db = new SimpleFileObjectDb(@"C:\Temp\SimpleObjectDb\", config);
 
-string sqlServerConnectionString = @"Server=localhost,9001;Database=SimpleObjectDb;User Id=sa;Password=Passw0rd;Pooling=true;TrustServerCertificate=True;";
-SimpleSqlServerObjectDb.CreateIfNotExist(sqlServerConnectionString, config);
-ISimpleObjectDb db = new SimpleSqlServerObjectDb(sqlServerConnectionString, config);
+//var sqlServerConnectionString = @"Server=localhost,9001;Database=SimpleObjectDb;User Id=sa;Password=Passw0rd;Pooling=true;TrustServerCertificate=True;";
+//SimpleSqlServerObjectDb.CreateIfNotExist(sqlServerConnectionString, config);
+//ISimpleObjectDb db = new SimpleSqlServerObjectDb(sqlServerConnectionString, config);
+
+var postgresConnectionString = @"Server=localhost;Port=9002;User Id=postgres;Password=Passw0rd;Database=simple_object_db;";
+SimplePostgreSqlObjectDb.CreateIfNotExist(postgresConnectionString, config);
+ISimpleObjectDb db = new SimplePostgreSqlObjectDb(postgresConnectionString, config);
 
 // ==============================
 // Test with many small objects
