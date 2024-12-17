@@ -33,7 +33,7 @@ public class SimpleSqlServerObjectDb : ISimpleObjectDb
         }
         catch (Exception ex)
         {
-            throw new SimpleFileDbException("Could not create object", ex);
+            throw new SimpleObjectDbException("Could not create object", ex);
         }
     }
 
@@ -55,7 +55,7 @@ public class SimpleSqlServerObjectDb : ISimpleObjectDb
         }
         catch (Exception ex)
         {
-            throw new SimpleFileDbException("Could not update object", ex);
+            throw new SimpleObjectDbException("Could not update object", ex);
         }
     }
 
@@ -87,7 +87,7 @@ public class SimpleSqlServerObjectDb : ISimpleObjectDb
         }
         catch (Exception ex)
         {
-            throw new SimpleFileDbException("Could not get object", ex);
+            throw new SimpleObjectDbException("Could not get object", ex);
         }
     }
 
@@ -113,7 +113,7 @@ public class SimpleSqlServerObjectDb : ISimpleObjectDb
         }
         catch (Exception ex)
         {
-            throw new SimpleFileDbException("Could not get objects", ex);
+            throw new SimpleObjectDbException("Could not get objects", ex);
         }
 
         foreach (var json in jsonObjects)
@@ -141,7 +141,7 @@ public class SimpleSqlServerObjectDb : ISimpleObjectDb
         }
         catch (Exception ex)
         {
-            throw new SimpleFileDbException("Could not update object", ex);
+            throw new SimpleObjectDbException("Could not update object", ex);
         }
     }
 
@@ -191,7 +191,7 @@ public class SimpleSqlServerObjectDb : ISimpleObjectDb
         }
         catch (Exception ex)
         {
-            throw new SimpleFileDbException("Could not update object", ex);
+            throw new SimpleObjectDbException("Could not update object", ex);
         }
     }
 
@@ -216,7 +216,7 @@ public class SimpleSqlServerObjectDb : ISimpleObjectDb
         }
         catch (Exception ex)
         {
-            throw new SimpleFileDbException("Could not update object", ex);
+            throw new SimpleObjectDbException("Could not update object", ex);
         }
     }
 }
