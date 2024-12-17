@@ -1,4 +1,6 @@
-﻿namespace SimpleFileDatabase;
+﻿using SimpleFileDatabase;
+
+namespace SimpleObjectDb.db;
 
 public class SimpleObjectDbConfiguration
 {
@@ -35,8 +37,7 @@ public class SimpleObjectDbConfiguration
             throw new TypeNotRegisteredException($"{type.FullName} not registered");
         }
 
-        var typedConverter = converter as SimpleObjectDbConfiguration.TypedIdConverter<Tdata>;
-        if (typedConverter == null)
+        if (converter is not TypedIdConverter<Tdata> typedConverter)
         {
             throw new Exception();
         }

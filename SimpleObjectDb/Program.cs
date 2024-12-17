@@ -1,13 +1,14 @@
-﻿using AutoFixture;
+﻿using System.Diagnostics;
+using AutoFixture;
 using SimpleFileDatabase;
-using SimpleObjectDb.db.file;
-using System.Diagnostics;
+using SimpleObjectDb.db;
+using SimpleObjectDb.db.postgresql;
 
-var fixture = new Fixture();
-var stopwatch = new Stopwatch();
+Fixture fixture = new();
+Stopwatch stopwatch = new();
 
 
-var config = new SimpleObjectDbConfiguration();
+SimpleObjectDbConfiguration config = new();
 config.RegisterDataType<TestObjectA>(i => i.Id);
 config.RegisterDataType<TestObjectB>(i => i.Id);
 
@@ -84,8 +85,8 @@ Console.WriteLine($"Items deleted from db in {stopwatch.Elapsed}");
 // Test with few large objects
 // ==============================
 
-var testObjectBList = new List<TestObjectB>();
-for (int i = 0; i < 1000; i++)
+List<TestObjectB> testObjectBList = new();
+for (var i = 0; i < 1000; i++)
 {
     testObjectBList.Add(new TestObjectB(Guid.NewGuid(), fixture.CreateMany<TestSubObjectB>(500).ToArray()));
 }
