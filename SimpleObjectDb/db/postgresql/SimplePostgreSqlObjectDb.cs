@@ -148,7 +148,7 @@ public class SimplePostgreSqlObjectDb : ISimpleObjectDb
         }
         catch (Exception ex)
         {
-            throw new SimpleObjectDbException("Could not update object", ex);
+            throw new SimpleObjectDbException("Could not delete object", ex);
         }
     }
 
@@ -210,7 +210,7 @@ public class SimplePostgreSqlObjectDb : ISimpleObjectDb
         }
         catch (Exception ex)
         {
-            throw new SimpleObjectDbException("Could not update object", ex);
+            throw new SimpleObjectDbException("Could not create database", ex);
         }
     }
 
@@ -220,22 +220,24 @@ public class SimplePostgreSqlObjectDb : ISimpleObjectDb
         {
             using var connection = new NpgsqlConnection(connectionString);
             connection.Open();
+            using var transaction = connection.BeginTransaction();
             foreach (var tableName in tableNames)
             {
                 var sql = $@"CREATE TABLE IF NOT EXISTS public.{tableName} (
                                 id varchar(50), 
                                 data jsonb,
-                                PRIMARY KEY (Id)
+                                PRIMARY KEY (id)
                             );";
                 using var cmd = new NpgsqlCommand(sql);
                 cmd.Connection = connection;
                 cmd.ExecuteNonQuery();
             }
+            transaction.Commit();
             connection.Close();
         }
         catch (Exception ex)
         {
-            throw new SimpleObjectDbException("Could not update object", ex);
+            throw new SimpleObjectDbException("Could not create database tables", ex);
         }
     }
 }

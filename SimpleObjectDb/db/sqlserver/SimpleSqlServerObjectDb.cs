@@ -141,7 +141,7 @@ public class SimpleSqlServerObjectDb : ISimpleObjectDb
         }
         catch (Exception ex)
         {
-            throw new SimpleObjectDbException("Could not update object", ex);
+            throw new SimpleObjectDbException("Could not delete object", ex);
         }
     }
 
@@ -191,7 +191,7 @@ public class SimpleSqlServerObjectDb : ISimpleObjectDb
         }
         catch (Exception ex)
         {
-            throw new SimpleObjectDbException("Could not update object", ex);
+            throw new SimpleObjectDbException("Could not create database", ex);
         }
     }
 
@@ -201,6 +201,7 @@ public class SimpleSqlServerObjectDb : ISimpleObjectDb
         {
             using var connection = new SqlConnection(connectionString);
             connection.Open();
+            using var transaction = connection.BeginTransaction();
             foreach (var tableName in tableNames)
             {
                 var sql = $@"IF OBJECT_ID(N'dbo.{tableName}', N'U') IS NULL
@@ -212,11 +213,12 @@ public class SimpleSqlServerObjectDb : ISimpleObjectDb
                 using var cmd = new SqlCommand(sql, connection);
                 cmd.ExecuteNonQuery();
             }
+            transaction.Commit();
             connection.Close();
         }
         catch (Exception ex)
         {
-            throw new SimpleObjectDbException("Could not update object", ex);
+            throw new SimpleObjectDbException("Could not create database tables", ex);
         }
     }
 }
