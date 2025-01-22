@@ -210,7 +210,7 @@ public class SimpleSqlServerObjectDb : ISimpleObjectDb
                                     Data varchar(MAX),
                                     PRIMARY KEY (Id)
                                 );";
-                using var cmd = new SqlCommand(sql, connection);
+                using var cmd = new SqlCommand(sql, connection, transaction);
                 cmd.ExecuteNonQuery();
             }
             transaction.Commit();

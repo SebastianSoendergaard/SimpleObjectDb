@@ -27,8 +27,7 @@ public class SimplePostgreSqlObjectDb : ISimpleObjectDb
         {
             using var connection = new NpgsqlConnection(_connectionString);
             connection.Open();
-            using var cmd = new NpgsqlCommand(sql);
-            cmd.Connection = connection;
+            using var cmd = new NpgsqlCommand(sql, connection);
             cmd.Parameters.AddWithValue("id", id.ToString() ?? "");
             cmd.Parameters.AddWithValue("data", NpgsqlDbType.Jsonb, json);
             await cmd.ExecuteNonQueryAsync();
@@ -50,8 +49,7 @@ public class SimplePostgreSqlObjectDb : ISimpleObjectDb
         {
             using var connection = new NpgsqlConnection(_connectionString);
             connection.Open();
-            using var cmd = new NpgsqlCommand(sql);
-            cmd.Connection = connection;
+            using var cmd = new NpgsqlCommand(sql, connection);
             cmd.Parameters.AddWithValue("id", id.ToString() ?? "");
             cmd.Parameters.AddWithValue("data", NpgsqlDbType.Jsonb, json);
             await cmd.ExecuteNonQueryAsync();
@@ -72,8 +70,7 @@ public class SimplePostgreSqlObjectDb : ISimpleObjectDb
         {
             using var connection = new NpgsqlConnection(_connectionString);
             connection.Open();
-            using var cmd = new NpgsqlCommand(sql);
-            cmd.Connection = connection;
+            using var cmd = new NpgsqlCommand(sql, connection);
             cmd.Parameters.AddWithValue("id", id.ToString() ?? "");
             using (var reader = await cmd.ExecuteReaderAsync())
             {
@@ -105,8 +102,7 @@ public class SimplePostgreSqlObjectDb : ISimpleObjectDb
         {
             using var connection = new NpgsqlConnection(_connectionString);
             connection.Open();
-            using var cmd = new NpgsqlCommand(sql);
-            cmd.Connection = connection;
+            using var cmd = new NpgsqlCommand(sql, connection);
             using (var reader = await cmd.ExecuteReaderAsync())
             {
                 while (reader.Read())
@@ -140,8 +136,7 @@ public class SimplePostgreSqlObjectDb : ISimpleObjectDb
         {
             using var connection = new NpgsqlConnection(_connectionString);
             connection.Open();
-            using var cmd = new NpgsqlCommand(sql);
-            cmd.Connection = connection;
+            using var cmd = new NpgsqlCommand(sql, connection);
             cmd.Parameters.AddWithValue("id", id.ToString() ?? "");
             await cmd.ExecuteNonQueryAsync();
             connection.Close();
@@ -228,8 +223,7 @@ public class SimplePostgreSqlObjectDb : ISimpleObjectDb
                                 data jsonb,
                                 PRIMARY KEY (id)
                             );";
-                using var cmd = new NpgsqlCommand(sql);
-                cmd.Connection = connection;
+                using var cmd = new NpgsqlCommand(sql, connection, transaction);
                 cmd.ExecuteNonQuery();
             }
             transaction.Commit();
