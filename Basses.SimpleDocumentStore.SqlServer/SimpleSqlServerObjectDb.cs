@@ -1,36 +1,33 @@
-﻿using System.Text.Json;
-using System.Text.RegularExpressions;
-using Npgsql;
-using NpgsqlTypes;
-using SimpleFileDatabase;
+﻿using System.Runtime.CompilerServices;
+using System.Text.Json;
+using Microsoft.Data.SqlClient;
 
-namespace SimpleObjectDb.db.postgresql;
+namespace Basses.SimpleDocumentStore.SqlServer;
 
-public class SimplePostgreSqlObjectDb : ISimpleObjectDb
+public class SimpleSqlServerObjectDb : ISimpleObjectDb
 {
     private readonly string _connectionString;
     private readonly SimpleObjectDbConfiguration _configuration;
 
-    public SimplePostgreSqlObjectDb(string connectionString, SimpleObjectDbConfiguration configuration)
+    public SimpleSqlServerObjectDb(string connectionString, SimpleObjectDbConfiguration configuration)
     {
         _connectionString = connectionString;
         _configuration = configuration;
     }
 
-    public async Task CreateAsync<Tdata>(Tdata data) where Tdata : class
+    public async Task CreateAsync<Tdata>(Tdata data, CancellationToken cancellationToken = default) where Tdata : class
     {
         var id = _configuration.GetIdFromData(data);
         var json = JsonSerializer.Serialize(data);
-        var sql = $"INSERT INTO {GetTableName<Tdata>()} (id, data) values(@id, @data)";
+        var sql = $"INSERT INTO {GetTableName<Tdata>()} (Id, Data) values(@id, @data)";
 
         try
         {
-            using var connection = new NpgsqlConnection(_connectionString);
+            using var connection = new SqlConnection(_connectionString);
             connection.Open();
-            using var cmd = new NpgsqlCommand(sql);
-            cmd.Connection = connection;
-            cmd.Parameters.AddWithValue("id", id.ToString() ?? "");
-            cmd.Parameters.AddWithValue("data", NpgsqlDbType.Jsonb, json);
+            using var cmd = new SqlCommand(sql, connection);
+            cmd.Parameters.AddWithValue("id", id.ToString());
+            cmd.Parameters.AddWithValue("data", json);
             await cmd.ExecuteNonQueryAsync();
             connection.Close();
         }
@@ -40,20 +37,19 @@ public class SimplePostgreSqlObjectDb : ISimpleObjectDb
         }
     }
 
-    public async Task UpdateAsync<Tdata>(Tdata data) where Tdata : class
+    public async Task UpdateAsync<Tdata>(Tdata data, CancellationToken cancellationToken = default) where Tdata : class
     {
         var id = _configuration.GetIdFromData(data);
         var json = JsonSerializer.Serialize(data);
-        var sql = $"UPDATE {GetTableName<Tdata>()} SET data = @data WHERE id = @id";
+        var sql = $"UPDATE {GetTableName<Tdata>()} SET Data = @data WHERE Id = @id";
 
         try
         {
-            using var connection = new NpgsqlConnection(_connectionString);
+            using var connection = new SqlConnection(_connectionString);
             connection.Open();
-            using var cmd = new NpgsqlCommand(sql);
-            cmd.Connection = connection;
-            cmd.Parameters.AddWithValue("id", id.ToString() ?? "");
-            cmd.Parameters.AddWithValue("data", NpgsqlDbType.Jsonb, json);
+            using var cmd = new SqlCommand(sql, connection);
+            cmd.Parameters.AddWithValue("id", id.ToString());
+            cmd.Parameters.AddWithValue("data", json);
             await cmd.ExecuteNonQueryAsync();
             connection.Close();
         }
@@ -63,18 +59,17 @@ public class SimplePostgreSqlObjectDb : ISimpleObjectDb
         }
     }
 
-    public async Task<Tdata?> GetByIdAsync<Tdata>(object id) where Tdata : class
+    public async Task<Tdata?> GetByIdAsync<Tdata>(object id, CancellationToken cancellationToken = default) where Tdata : class
     {
-        var sql = $"SELECT data FROM {GetTableName<Tdata>()} WHERE id = @id";
+        var sql = $"SELECT Data FROM {GetTableName<Tdata>()} WHERE Id = @id";
         var json = "";
 
         try
         {
-            using var connection = new NpgsqlConnection(_connectionString);
+            using var connection = new SqlConnection(_connectionString);
             connection.Open();
-            using var cmd = new NpgsqlCommand(sql);
-            cmd.Connection = connection;
-            cmd.Parameters.AddWithValue("id", id.ToString() ?? "");
+            using var cmd = new SqlCommand(sql, connection);
+            cmd.Parameters.AddWithValue("id", id.ToString());
             using (var reader = await cmd.ExecuteReaderAsync())
             {
                 while (reader.Read())
@@ -96,17 +91,16 @@ public class SimplePostgreSqlObjectDb : ISimpleObjectDb
         }
     }
 
-    public async IAsyncEnumerable<Tdata> GetAllAsync<Tdata>() where Tdata : class
+    public async IAsyncEnumerable<Tdata> GetAllAsync<Tdata>([EnumeratorCancellation] CancellationToken cancellationToken = default) where Tdata : class
     {
-        List<string> jsonObjects = new();
-        var sql = $"SELECT data FROM {GetTableName<Tdata>()}";
+        var jsonObjects = new List<string>();
+        var sql = $"SELECT Data FROM {GetTableName<Tdata>()}";
 
         try
         {
-            using var connection = new NpgsqlConnection(_connectionString);
+            using var connection = new SqlConnection(_connectionString);
             connection.Open();
-            using var cmd = new NpgsqlCommand(sql);
-            cmd.Connection = connection;
+            using var cmd = new SqlCommand(sql, connection);
             using (var reader = await cmd.ExecuteReaderAsync())
             {
                 while (reader.Read())
@@ -132,17 +126,16 @@ public class SimplePostgreSqlObjectDb : ISimpleObjectDb
         }
     }
 
-    public async Task DeleteByIdAsync<Tdata>(object id) where Tdata : class
+    public async Task DeleteByIdAsync<Tdata>(object id, CancellationToken cancellationToken = default) where Tdata : class
     {
-        var sql = $"DELETE FROM {GetTableName<Tdata>()} WHERE id = @id";
+        var sql = $"DELETE FROM {GetTableName<Tdata>()} WHERE Id = @id";
 
         try
         {
-            using var connection = new NpgsqlConnection(_connectionString);
+            using var connection = new SqlConnection(_connectionString);
             connection.Open();
-            using var cmd = new NpgsqlCommand(sql);
-            cmd.Connection = connection;
-            cmd.Parameters.AddWithValue("id", id.ToString() ?? "");
+            using var cmd = new SqlCommand(sql, connection);
+            cmd.Parameters.AddWithValue("id", id.ToString());
             await cmd.ExecuteNonQueryAsync();
             connection.Close();
         }
@@ -152,14 +145,9 @@ public class SimplePostgreSqlObjectDb : ISimpleObjectDb
         }
     }
 
-    private static string GetTableName<Tdata>()
+    private string GetTableName<Tdata>()
     {
-        return TableNameFromTypeName(typeof(Tdata).Name);
-    }
-
-    private static string TableNameFromTypeName(string typeName)
-    {
-        return Regex.Replace(typeName, @"(?<!_|^)([A-Z])", "_$1").ToLower();
+        return typeof(Tdata).Name;
     }
 
     public static void CreateIfNotExist(string connectionString, SimpleObjectDbConfiguration configuration)
@@ -186,26 +174,19 @@ public class SimplePostgreSqlObjectDb : ISimpleObjectDb
 
         CreateDatabaseIfNotExists(connectionStringWithoutDatabase, databaseName);
 
-        CreateTablesIfNotExists(connectionString, configuration.IdConverters.Select(x => TableNameFromTypeName(x.Key.Name)).ToArray());
+        CreateTablesIfNotExists(connectionString, configuration.IdConverters.Select(x => x.Key.Name).ToArray());
     }
 
     private static void CreateDatabaseIfNotExists(string connectionString, string databaseName)
     {
         try
         {
-            using var connection = new NpgsqlConnection(connectionString);
+            using var connection = new SqlConnection(connectionString);
             connection.Open();
-            var sql1 = $"SELECT COUNT(*) FROM pg_database WHERE datname = '{databaseName}'";
-            using var cmd1 = new NpgsqlCommand(sql1);
-            cmd1.Connection = connection;
-            var tableCount = (long)(cmd1.ExecuteScalar() ?? 0);
-            if (tableCount == 0)
-            {
-                var sql2 = $"CREATE DATABASE {databaseName}";
-                using var cmd2 = new NpgsqlCommand(sql2);
-                cmd2.Connection = connection;
-                cmd2.ExecuteNonQuery();
-            }
+            var sql = $@"IF NOT EXISTS(SELECT * FROM sys.databases WHERE name = '{databaseName}')
+                         CREATE DATABASE [{databaseName}]";
+            using var cmd = new SqlCommand(sql, connection);
+            cmd.ExecuteNonQuery();
             connection.Close();
         }
         catch (Exception ex)
@@ -218,18 +199,18 @@ public class SimplePostgreSqlObjectDb : ISimpleObjectDb
     {
         try
         {
-            using var connection = new NpgsqlConnection(connectionString);
+            using var connection = new SqlConnection(connectionString);
             connection.Open();
             using var transaction = connection.BeginTransaction();
             foreach (var tableName in tableNames)
             {
-                var sql = $@"CREATE TABLE IF NOT EXISTS public.{tableName} (
-                                id varchar(50), 
-                                data jsonb,
-                                PRIMARY KEY (id)
-                            );";
-                using var cmd = new NpgsqlCommand(sql);
-                cmd.Connection = connection;
+                var sql = $@"IF OBJECT_ID(N'dbo.{tableName}', N'U') IS NULL
+                                CREATE TABLE dbo.{tableName} (
+                                    Id varchar(50), 
+                                    Data varchar(MAX),
+                                    PRIMARY KEY (Id)
+                                );";
+                using var cmd = new SqlCommand(sql, connection);
                 cmd.ExecuteNonQuery();
             }
             transaction.Commit();

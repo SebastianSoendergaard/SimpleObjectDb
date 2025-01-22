@@ -1,7 +1,7 @@
-﻿using System.Text.Json;
-using SimpleFileDatabase;
+﻿using System.Runtime.CompilerServices;
+using System.Text.Json;
 
-namespace SimpleObjectDb.db.file;
+namespace Basses.SimpleDocumentStore.Files;
 
 public class SimpleFileObjectDb : ISimpleObjectDb
 {
@@ -16,7 +16,7 @@ public class SimpleFileObjectDb : ISimpleObjectDb
         Directory.CreateDirectory(_directoryPath);
     }
 
-    public async Task CreateAsync<Tdata>(Tdata data) where Tdata : class
+    public async Task CreateAsync<Tdata>(Tdata data, CancellationToken cancellationToken = default) where Tdata : class
     {
         var id = _configuration.GetIdFromData(data);
         var path = CreateFilePath<Tdata>(id);
@@ -31,7 +31,7 @@ public class SimpleFileObjectDb : ISimpleObjectDb
         await File.WriteAllTextAsync(path, json);
     }
 
-    public async Task UpdateAsync<Tdata>(Tdata data) where Tdata : class
+    public async Task UpdateAsync<Tdata>(Tdata data, CancellationToken cancellationToken = default) where Tdata : class
     {
         var id = _configuration.GetIdFromData(data);
         var path = CreateFilePath<Tdata>(id);
@@ -44,7 +44,7 @@ public class SimpleFileObjectDb : ISimpleObjectDb
         await File.WriteAllTextAsync(path, json);
     }
 
-    public async Task<Tdata?> GetByIdAsync<Tdata>(object id) where Tdata : class
+    public async Task<Tdata?> GetByIdAsync<Tdata>(object id, CancellationToken cancellationToken = default) where Tdata : class
     {
         var path = CreateFilePath<Tdata>(id);
         if (!File.Exists(path))
@@ -57,13 +57,13 @@ public class SimpleFileObjectDb : ISimpleObjectDb
         return data;
     }
 
-    public async IAsyncEnumerable<Tdata> GetAllAsync<Tdata>() where Tdata : class
+    public async IAsyncEnumerable<Tdata> GetAllAsync<Tdata>([EnumeratorCancellation] CancellationToken cancellationToken = default) where Tdata : class
     {
         var path = CreateDirectoryPath<Tdata>();
         var files = Directory.EnumerateFiles(path);
         foreach (var file in files)
         {
-            var json = await File.ReadAllTextAsync(file);
+            var json = await File.ReadAllTextAsync(file, cancellationToken);
             var data = JsonSerializer.Deserialize<Tdata>(json);
             if (data != null)
             {
@@ -72,7 +72,7 @@ public class SimpleFileObjectDb : ISimpleObjectDb
         }
     }
 
-    public Task DeleteByIdAsync<Tdata>(object id) where Tdata : class
+    public Task DeleteByIdAsync<Tdata>(object id, CancellationToken cancellationToken = default) where Tdata : class
     {
         var path = CreateFilePath<Tdata>(id);
         File.Delete(path);

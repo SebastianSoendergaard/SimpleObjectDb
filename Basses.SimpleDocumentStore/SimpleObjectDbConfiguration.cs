@@ -1,10 +1,8 @@
-﻿using SimpleFileDatabase;
-
-namespace SimpleObjectDb.db;
+﻿namespace Basses.SimpleDocumentStore;
 
 public class SimpleObjectDbConfiguration
 {
-    public Dictionary<Type, IIdConverter> IdConverters { get; } = new Dictionary<Type, IIdConverter>();
+    public Dictionary<Type, IIdConverter> IdConverters { get; } = [];
     public SimpleObjectDbConfiguration RegisterDataType<Tdata>(Func<Tdata, object> dataTypeToIdValue) where Tdata : class
     {
         var converter = new TypedIdConverter<Tdata>(dataTypeToIdValue);

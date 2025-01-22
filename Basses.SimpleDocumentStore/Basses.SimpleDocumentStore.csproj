@@ -1,0 +1,39 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <ApplicationIcon>simple_document_store.ico</ApplicationIcon>
+    <Title>$(AssemblyName)</Title>
+    <Description>Easy way to store objects as documents using either raw files as backing.
+By using this you will have real persistency without any effort, this gives you time to fully implement your solution while postponing the desision of the actual data storage solution until the very last minute.
+In some cases you may even find that using this is sufficient as the actual store solution. Especially in small application where high performance is not required.
+</Description>
+    <Authors>Sebastian Søndergaard</Authors>
+    <PackageIcon>simple_document_store.png</PackageIcon>
+    <PackageTags>document;store;database;nosql;file;files;json</PackageTags>
+    <PackageReleaseNotes>Initial version</PackageReleaseNotes>
+    <RepositoryType>git</RepositoryType>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Content Include="simple_document_store.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\README.md">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="simple_document_store.png">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+  </ItemGroup>
+
+</Project>

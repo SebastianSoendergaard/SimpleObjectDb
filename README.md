@@ -1,7 +1,7 @@
 # SimpleObjectDb
-Easy way to store data in a No SQL way
+Easy way to store object in a No SQL way.
 
-The solution consists of a generic interface that can be used by the application. The interface can be backed by different storage solutions. Currently the solution supports raw files and MS SQL Server as backing.
+The solution consists of a generic interface that can be used by the application. The interface can be backed by different storage solutions. Currently the solution supports raw files, MS SQL Server and PostgreSql as backing.
 
 ### Purpose
 The main purpose with this is not to be used in large production systems but more during development. When developing, focus should be on the requirements and behavior not data. 

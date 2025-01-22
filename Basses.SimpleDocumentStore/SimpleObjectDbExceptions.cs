@@ -1,4 +1,4 @@
-﻿namespace SimpleObjectDb.db;
+﻿namespace Basses.SimpleDocumentStore;
 
 public class SimpleObjectDbException : Exception
 {

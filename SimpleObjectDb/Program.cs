@@ -1,8 +1,7 @@
 ﻿using System.Diagnostics;
 using AutoFixture;
-using SimpleFileDatabase;
-using SimpleObjectDb.db;
-using SimpleObjectDb.db.postgresql;
+using Basses.SimpleDocumentStore;
+using Basses.SimpleDocumentStore.PostgreSql;
 
 Fixture fixture = new();
 Stopwatch stopwatch = new();
@@ -62,10 +61,15 @@ Console.WriteLine($"Items updated in db in {stopwatch.Elapsed}");
 
 Console.WriteLine("Fetching all (many) items from db");
 stopwatch.Restart();
-List<TestObjectA> allItems = new();
-await foreach (var item in db.GetAllAsync<TestObjectA>())
+var allItems = new List<TestObjectA>();
+var enumerator = db.GetAllAsync<TestObjectA>().GetAsyncEnumerator();
+try
 {
-    allItems.Add(item);
+    while (await enumerator.MoveNextAsync()) { allItems.Add(enumerator.Current); }
+}
+finally
+{
+    if (enumerator != null) { await enumerator.DisposeAsync(); }
 }
 stopwatch.Stop();
 Console.WriteLine($"All items fetched from db in {stopwatch.Elapsed}");
@@ -85,7 +89,7 @@ Console.WriteLine($"Items deleted from db in {stopwatch.Elapsed}");
 // Test with few large objects
 // ==============================
 
-List<TestObjectB> testObjectBList = new();
+List<TestObjectB> testObjectBList = [];
 for (var i = 0; i < 1000; i++)
 {
     testObjectBList.Add(new TestObjectB(Guid.NewGuid(), fixture.CreateMany<TestSubObjectB>(500).ToArray()));
