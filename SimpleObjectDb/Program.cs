@@ -28,7 +28,7 @@ ISimpleObjectDb db = new SimplePostgreSqlObjectDb(postgresConnectionString, conf
 var testObjectAList = fixture.CreateMany<TestObjectA>(10000);
 
 
-Console.WriteLine("Creating many items in db");
+Console.WriteLine($"Creating ({testObjectAList.Count()}) items in db");
 stopwatch.Start();
 foreach (var item in testObjectAList)
 {
@@ -38,7 +38,7 @@ stopwatch.Stop();
 Console.WriteLine($"Items created in db in {stopwatch.Elapsed}");
 
 
-Console.WriteLine("Fetching many items from db one by one");
+Console.WriteLine($"Fetching ({testObjectAList.Count()}) items from db one by one");
 stopwatch.Restart();
 foreach (var item in testObjectAList)
 {
@@ -48,7 +48,7 @@ stopwatch.Stop();
 Console.WriteLine($"Items fetched from db in {stopwatch.Elapsed}");
 
 
-Console.WriteLine("Updating many items in db one by one");
+Console.WriteLine($"Updating ({testObjectAList.Count()}) items in db one by one");
 stopwatch.Restart();
 foreach (var item in testObjectAList)
 {
@@ -59,7 +59,7 @@ stopwatch.Stop();
 Console.WriteLine($"Items updated in db in {stopwatch.Elapsed}");
 
 
-Console.WriteLine("Fetching all (many) items from db");
+Console.WriteLine($"Fetching all ({testObjectAList.Count()}) items from db");
 stopwatch.Restart();
 var allItems = new List<TestObjectA>();
 var enumerator = db.GetAllAsync<TestObjectA>().GetAsyncEnumerator();
@@ -75,7 +75,7 @@ stopwatch.Stop();
 Console.WriteLine($"All items fetched from db in {stopwatch.Elapsed}");
 
 
-Console.WriteLine("Deleting many items from db one by one");
+Console.WriteLine($"Deleting ({testObjectAList.Count()}) items from db one by one");
 stopwatch.Restart();
 foreach (var item in testObjectAList)
 {
@@ -95,7 +95,7 @@ for (var i = 0; i < 1000; i++)
     testObjectBList.Add(new TestObjectB(Guid.NewGuid(), fixture.CreateMany<TestSubObjectB>(500).ToArray()));
 }
 
-Console.WriteLine("Creating large items in db");
+Console.WriteLine($"Creating ({testObjectBList.Count()}) large items in db");
 stopwatch.Start();
 foreach (var item in testObjectBList)
 {
@@ -104,7 +104,7 @@ foreach (var item in testObjectBList)
 stopwatch.Stop();
 Console.WriteLine($"Items created in db in {stopwatch.Elapsed}");
 
-Console.WriteLine("Updating large items in db one by one");
+Console.WriteLine($"Updating ({testObjectBList.Count()}) large items in db one by one");
 stopwatch.Restart();
 foreach (var item in testObjectBList)
 {
@@ -114,7 +114,7 @@ foreach (var item in testObjectBList)
 stopwatch.Stop();
 Console.WriteLine($"Items updated in db in {stopwatch.Elapsed}");
 
-Console.WriteLine("Deleting large items from db one by one");
+Console.WriteLine($"Deleting ({testObjectBList.Count()}) large items from db one by one");
 stopwatch.Restart();
 foreach (var item in testObjectBList)
 {
