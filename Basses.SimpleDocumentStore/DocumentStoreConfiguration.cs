@@ -1,9 +1,9 @@
 ﻿namespace Basses.SimpleDocumentStore;
 
-public class SimpleObjectDbConfiguration
+public class DocumentStoreConfiguration
 {
     public Dictionary<Type, IIdConverter> IdConverters { get; } = [];
-    public SimpleObjectDbConfiguration RegisterDataType<Tdata>(Func<Tdata, object> dataTypeToIdValue) where Tdata : class
+    public DocumentStoreConfiguration RegisterDataType<Tdata>(Func<Tdata, object> dataTypeToIdValue) where Tdata : class
     {
         var converter = new TypedIdConverter<Tdata>(dataTypeToIdValue);
         IdConverters.Add(typeof(Tdata), converter);

@@ -4,15 +4,17 @@ using Microsoft.Data.SqlClient;
 
 namespace Basses.SimpleDocumentStore.SqlServer;
 
-public class SimpleSqlServerObjectDb : ISimpleObjectDb
+public class SqlServerDocumentStore : IDocumentStore
 {
     private readonly string _connectionString;
-    private readonly SimpleObjectDbConfiguration _configuration;
+    private readonly DocumentStoreConfiguration _configuration;
 
-    public SimpleSqlServerObjectDb(string connectionString, SimpleObjectDbConfiguration configuration)
+    public SqlServerDocumentStore(string connectionString, DocumentStoreConfiguration configuration)
     {
         _connectionString = connectionString;
         _configuration = configuration;
+
+        CreateIfNotExist(_connectionString, _configuration);
     }
 
     public async Task CreateAsync<Tdata>(Tdata data, CancellationToken cancellationToken = default) where Tdata : class
@@ -28,12 +30,16 @@ public class SimpleSqlServerObjectDb : ISimpleObjectDb
             using var cmd = new SqlCommand(sql, connection);
             cmd.Parameters.AddWithValue("id", id.ToString());
             cmd.Parameters.AddWithValue("data", json);
-            await cmd.ExecuteNonQueryAsync();
+            await cmd.ExecuteNonQueryAsync(cancellationToken);
             connection.Close();
+        }
+        catch (SqlException ex) when (ex.Message.Contains("Violation of PRIMARY KEY constraint"))
+        {
+            throw new AlreadyExistException($"Id for {typeof(Tdata).FullName} already exist");
         }
         catch (Exception ex)
         {
-            throw new SimpleObjectDbException("Could not create object", ex);
+            throw new SimpleDocumentStoreException("Could not create object", ex);
         }
     }
 
@@ -42,6 +48,7 @@ public class SimpleSqlServerObjectDb : ISimpleObjectDb
         var id = _configuration.GetIdFromData(data);
         var json = JsonSerializer.Serialize(data);
         var sql = $"UPDATE {GetTableName<Tdata>()} SET Data = @data WHERE Id = @id";
+        int affectedRows = 0;
 
         try
         {
@@ -50,12 +57,17 @@ public class SimpleSqlServerObjectDb : ISimpleObjectDb
             using var cmd = new SqlCommand(sql, connection);
             cmd.Parameters.AddWithValue("id", id.ToString());
             cmd.Parameters.AddWithValue("data", json);
-            await cmd.ExecuteNonQueryAsync();
+            affectedRows = await cmd.ExecuteNonQueryAsync(cancellationToken);
             connection.Close();
         }
         catch (Exception ex)
         {
-            throw new SimpleObjectDbException("Could not update object", ex);
+            throw new SimpleDocumentStoreException("Could not update object", ex);
+        }
+
+        if (affectedRows == 0)
+        {
+            throw new NotFoundException($"Id for {typeof(Tdata).FullName} not found");
         }
     }
 
@@ -70,7 +82,7 @@ public class SimpleSqlServerObjectDb : ISimpleObjectDb
             connection.Open();
             using var cmd = new SqlCommand(sql, connection);
             cmd.Parameters.AddWithValue("id", id.ToString());
-            using (var reader = await cmd.ExecuteReaderAsync())
+            using (var reader = await cmd.ExecuteReaderAsync(cancellationToken))
             {
                 while (reader.Read())
                 {
@@ -87,7 +99,7 @@ public class SimpleSqlServerObjectDb : ISimpleObjectDb
         }
         catch (Exception ex)
         {
-            throw new SimpleObjectDbException("Could not get object", ex);
+            throw new SimpleDocumentStoreException("Could not get object", ex);
         }
     }
 
@@ -101,7 +113,7 @@ public class SimpleSqlServerObjectDb : ISimpleObjectDb
             using var connection = new SqlConnection(_connectionString);
             connection.Open();
             using var cmd = new SqlCommand(sql, connection);
-            using (var reader = await cmd.ExecuteReaderAsync())
+            using (var reader = await cmd.ExecuteReaderAsync(cancellationToken))
             {
                 while (reader.Read())
                 {
@@ -113,7 +125,7 @@ public class SimpleSqlServerObjectDb : ISimpleObjectDb
         }
         catch (Exception ex)
         {
-            throw new SimpleObjectDbException("Could not get objects", ex);
+            throw new SimpleDocumentStoreException("Could not get objects", ex);
         }
 
         foreach (var json in jsonObjects)
@@ -136,12 +148,30 @@ public class SimpleSqlServerObjectDb : ISimpleObjectDb
             connection.Open();
             using var cmd = new SqlCommand(sql, connection);
             cmd.Parameters.AddWithValue("id", id.ToString());
-            await cmd.ExecuteNonQueryAsync();
+            await cmd.ExecuteNonQueryAsync(cancellationToken);
             connection.Close();
         }
         catch (Exception ex)
         {
-            throw new SimpleObjectDbException("Could not delete object", ex);
+            throw new SimpleDocumentStoreException("Could not delete object", ex);
+        }
+    }
+
+    public async Task DeleteAllAsync<Tdata>(CancellationToken cancellationToken = default) where Tdata : class
+    {
+        var sql = $"DELETE FROM {GetTableName<Tdata>()}";
+
+        try
+        {
+            using var connection = new SqlConnection(_connectionString);
+            connection.Open();
+            using var cmd = new SqlCommand(sql, connection);
+            await cmd.ExecuteNonQueryAsync(cancellationToken);
+            connection.Close();
+        }
+        catch (Exception ex)
+        {
+            throw new SimpleDocumentStoreException("Could not delete objects", ex);
         }
     }
 
@@ -150,7 +180,7 @@ public class SimpleSqlServerObjectDb : ISimpleObjectDb
         return typeof(Tdata).Name;
     }
 
-    public static void CreateIfNotExist(string connectionString, SimpleObjectDbConfiguration configuration)
+    private static void CreateIfNotExist(string connectionString, DocumentStoreConfiguration configuration)
     {
         var connectionProperties = connectionString
             .Split(';')
@@ -191,7 +221,7 @@ public class SimpleSqlServerObjectDb : ISimpleObjectDb
         }
         catch (Exception ex)
         {
-            throw new SimpleObjectDbException("Could not create database", ex);
+            throw new SimpleDocumentStoreException("Could not create database", ex);
         }
     }
 
@@ -218,7 +248,7 @@ public class SimpleSqlServerObjectDb : ISimpleObjectDb
         }
         catch (Exception ex)
         {
-            throw new SimpleObjectDbException("Could not create database tables", ex);
+            throw new SimpleDocumentStoreException("Could not create database tables", ex);
         }
     }
 }

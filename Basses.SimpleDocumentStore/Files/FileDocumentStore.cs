@@ -3,12 +3,12 @@ using System.Text.Json;
 
 namespace Basses.SimpleDocumentStore.Files;
 
-public class SimpleFileObjectDb : ISimpleObjectDb
+public class FileDocumentStore : IDocumentStore
 {
     private readonly string _directoryPath;
-    private readonly SimpleObjectDbConfiguration _configuration;
+    private readonly DocumentStoreConfiguration _configuration;
 
-    public SimpleFileObjectDb(string directoryPath, SimpleObjectDbConfiguration configuration)
+    public FileDocumentStore(string directoryPath, DocumentStoreConfiguration configuration)
     {
         _directoryPath = directoryPath;
         _configuration = configuration;
@@ -28,7 +28,7 @@ public class SimpleFileObjectDb : ISimpleObjectDb
         Directory.CreateDirectory(Path.GetDirectoryName(path) ?? throw new ArgumentNullException("Path cannot be null"));
 
         var json = JsonSerializer.Serialize(data);
-        await File.WriteAllTextAsync(path, json);
+        await File.WriteAllTextAsync(path, json, cancellationToken);
     }
 
     public async Task UpdateAsync<Tdata>(Tdata data, CancellationToken cancellationToken = default) where Tdata : class
@@ -41,7 +41,7 @@ public class SimpleFileObjectDb : ISimpleObjectDb
         }
 
         var json = JsonSerializer.Serialize(data);
-        await File.WriteAllTextAsync(path, json);
+        await File.WriteAllTextAsync(path, json, cancellationToken);
     }
 
     public async Task<Tdata?> GetByIdAsync<Tdata>(object id, CancellationToken cancellationToken = default) where Tdata : class
@@ -52,7 +52,7 @@ public class SimpleFileObjectDb : ISimpleObjectDb
             return null;
         }
 
-        var json = await File.ReadAllTextAsync(path);
+        var json = await File.ReadAllTextAsync(path, cancellationToken);
         var data = JsonSerializer.Deserialize<Tdata>(json);
         return data;
     }
@@ -63,6 +63,8 @@ public class SimpleFileObjectDb : ISimpleObjectDb
         var files = Directory.EnumerateFiles(path);
         foreach (var file in files)
         {
+            cancellationToken.ThrowIfCancellationRequested();
+
             var json = await File.ReadAllTextAsync(file, cancellationToken);
             var data = JsonSerializer.Deserialize<Tdata>(json);
             if (data != null)
@@ -76,6 +78,24 @@ public class SimpleFileObjectDb : ISimpleObjectDb
     {
         var path = CreateFilePath<Tdata>(id);
         File.Delete(path);
+        return Task.CompletedTask;
+    }
+
+    public Task DeleteAllAsync<Tdata>(CancellationToken cancellationToken = default) where Tdata : class
+    {
+        var path = CreateDirectoryPath<Tdata>();
+        if (!Directory.Exists(path))
+        {
+            return Task.CompletedTask;
+        }
+
+        var files = Directory.EnumerateFiles(path);
+        foreach (var file in files)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            File.Delete(file);
+        }
+
         return Task.CompletedTask;
     }
 

@@ -7,3 +7,11 @@ services:
       SA_PASSWORD: Passw0rd
     ports: 
       - "9001:1433"
+
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_PASSWORD: Passw0rd
+      POSTGRES_USER: postgres
+    ports:
+      - "9002:5432"

@@ -1,13 +1,15 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
     <ApplicationIcon>simple_document_store.ico</ApplicationIcon>
     <Title>$(AssemblyName)</Title>
     <Authors>Sebastian Søndergaard</Authors>
-    <Description>Easy way to store objects as documents using either raw files or SqlServer as backing.
+    <Description>Easy way to store objects as documents using either raw files or SqlServer as backing solution.
 By using this you will have real persistency without any effort, this gives you time to fully implement your solution while postponing the desision of the actual data storage solution until the very last minute.
 In some cases you may even find that using this is sufficient as the actual store solution. Especially in small application where high performance is not required.
 </Description>
@@ -15,6 +17,7 @@ In some cases you may even find that using this is sufficient as the actual stor
     <RepositoryType>git</RepositoryType>
     <PackageTags>document;store;database;nosql;sql;server;sqlserver;json</PackageTags>
     <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
   </PropertyGroup>
 
   <ItemGroup>

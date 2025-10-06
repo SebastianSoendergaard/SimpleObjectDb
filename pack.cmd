@@ -1,6 +1,5 @@
 @echo off
-
-set version=0.0.1
+set /p "version=Enter version (major.minor.build):"
 
 dotnet tool update --global dotnet-validate --version 0.0.1-preview.304
 

@@ -6,15 +6,17 @@ using NpgsqlTypes;
 
 namespace Basses.SimpleDocumentStore.PostgreSql;
 
-public class SimplePostgreSqlObjectDb : ISimpleObjectDb
+public class PostgreSqlDocumentStore : IDocumentStore
 {
     private readonly string _connectionString;
-    private readonly SimpleObjectDbConfiguration _configuration;
+    private readonly DocumentStoreConfiguration _configuration;
 
-    public SimplePostgreSqlObjectDb(string connectionString, SimpleObjectDbConfiguration configuration)
+    public PostgreSqlDocumentStore(string connectionString, DocumentStoreConfiguration configuration)
     {
         _connectionString = connectionString;
         _configuration = configuration;
+
+        CreateIfNotExist(_connectionString, _configuration);
     }
 
     public async Task CreateAsync<Tdata>(Tdata data, CancellationToken cancellationToken = default) where Tdata : class
@@ -30,12 +32,16 @@ public class SimplePostgreSqlObjectDb : ISimpleObjectDb
             using var cmd = new NpgsqlCommand(sql, connection);
             cmd.Parameters.AddWithValue("id", id.ToString() ?? "");
             cmd.Parameters.AddWithValue("data", NpgsqlDbType.Jsonb, json);
-            await cmd.ExecuteNonQueryAsync();
+            await cmd.ExecuteNonQueryAsync(cancellationToken);
             connection.Close();
+        }
+        catch (PostgresException ex) when (ex.Message.Contains("23505: duplicate key value violates unique constraint"))
+        {
+            throw new AlreadyExistException($"Id for {typeof(Tdata).FullName} already exist");
         }
         catch (Exception ex)
         {
-            throw new SimpleObjectDbException("Could not create object", ex);
+            throw new SimpleDocumentStoreException("Could not create object", ex);
         }
     }
 
@@ -44,6 +50,7 @@ public class SimplePostgreSqlObjectDb : ISimpleObjectDb
         var id = _configuration.GetIdFromData(data);
         var json = JsonSerializer.Serialize(data);
         var sql = $"UPDATE {GetTableName<Tdata>()} SET data = @data WHERE id = @id";
+        int affectedRows = 0;
 
         try
         {
@@ -52,12 +59,17 @@ public class SimplePostgreSqlObjectDb : ISimpleObjectDb
             using var cmd = new NpgsqlCommand(sql, connection);
             cmd.Parameters.AddWithValue("id", id.ToString() ?? "");
             cmd.Parameters.AddWithValue("data", NpgsqlDbType.Jsonb, json);
-            await cmd.ExecuteNonQueryAsync();
+            affectedRows = await cmd.ExecuteNonQueryAsync(cancellationToken);
             connection.Close();
         }
         catch (Exception ex)
         {
-            throw new SimpleObjectDbException("Could not update object", ex);
+            throw new SimpleDocumentStoreException("Could not update object", ex);
+        }
+
+        if (affectedRows == 0)
+        {
+            throw new NotFoundException($"Id for {typeof(Tdata).FullName} not found");
         }
     }
 
@@ -72,7 +84,7 @@ public class SimplePostgreSqlObjectDb : ISimpleObjectDb
             connection.Open();
             using var cmd = new NpgsqlCommand(sql, connection);
             cmd.Parameters.AddWithValue("id", id.ToString() ?? "");
-            using (var reader = await cmd.ExecuteReaderAsync())
+            using (var reader = await cmd.ExecuteReaderAsync(cancellationToken))
             {
                 while (reader.Read())
                 {
@@ -89,7 +101,7 @@ public class SimplePostgreSqlObjectDb : ISimpleObjectDb
         }
         catch (Exception ex)
         {
-            throw new SimpleObjectDbException("Could not get object", ex);
+            throw new SimpleDocumentStoreException("Could not get object", ex);
         }
     }
 
@@ -103,7 +115,7 @@ public class SimplePostgreSqlObjectDb : ISimpleObjectDb
             using var connection = new NpgsqlConnection(_connectionString);
             connection.Open();
             using var cmd = new NpgsqlCommand(sql, connection);
-            using (var reader = await cmd.ExecuteReaderAsync())
+            using (var reader = await cmd.ExecuteReaderAsync(cancellationToken))
             {
                 while (reader.Read())
                 {
@@ -115,7 +127,7 @@ public class SimplePostgreSqlObjectDb : ISimpleObjectDb
         }
         catch (Exception ex)
         {
-            throw new SimpleObjectDbException("Could not get objects", ex);
+            throw new SimpleDocumentStoreException("Could not get objects", ex);
         }
 
         foreach (var json in jsonObjects)
@@ -138,12 +150,30 @@ public class SimplePostgreSqlObjectDb : ISimpleObjectDb
             connection.Open();
             using var cmd = new NpgsqlCommand(sql, connection);
             cmd.Parameters.AddWithValue("id", id.ToString() ?? "");
-            await cmd.ExecuteNonQueryAsync();
+            await cmd.ExecuteNonQueryAsync(cancellationToken);
             connection.Close();
         }
         catch (Exception ex)
         {
-            throw new SimpleObjectDbException("Could not delete object", ex);
+            throw new SimpleDocumentStoreException("Could not delete object", ex);
+        }
+    }
+
+    public async Task DeleteAllAsync<Tdata>(CancellationToken cancellationToken = default) where Tdata : class
+    {
+        var sql = $"DELETE FROM {GetTableName<Tdata>()}";
+
+        try
+        {
+            using var connection = new NpgsqlConnection(_connectionString);
+            connection.Open();
+            using var cmd = new NpgsqlCommand(sql, connection);
+            await cmd.ExecuteNonQueryAsync(cancellationToken);
+            connection.Close();
+        }
+        catch (Exception ex)
+        {
+            throw new SimpleDocumentStoreException("Could not delete objects", ex);
         }
     }
 
@@ -157,7 +187,7 @@ public class SimplePostgreSqlObjectDb : ISimpleObjectDb
         return Regex.Replace(typeName, @"(?<!_|^)([A-Z])", "_$1").ToLower();
     }
 
-    public static void CreateIfNotExist(string connectionString, SimpleObjectDbConfiguration configuration)
+    private static void CreateIfNotExist(string connectionString, DocumentStoreConfiguration configuration)
     {
         var connectionProperties = connectionString
             .Split(';')
@@ -205,7 +235,7 @@ public class SimplePostgreSqlObjectDb : ISimpleObjectDb
         }
         catch (Exception ex)
         {
-            throw new SimpleObjectDbException("Could not create database", ex);
+            throw new SimpleDocumentStoreException("Could not create database", ex);
         }
     }
 
@@ -231,7 +261,7 @@ public class SimplePostgreSqlObjectDb : ISimpleObjectDb
         }
         catch (Exception ex)
         {
-            throw new SimpleObjectDbException("Could not create database tables", ex);
+            throw new SimpleDocumentStoreException("Could not create database tables", ex);
         }
     }
 }
