@@ -5,32 +5,35 @@ namespace Basses.SimpleDocumentStore.SqlServer;
 
 public class SqlServerDocumentStore : IDocumentStore
 {
-    private readonly string _connectionString;
+    private readonly SqlServerHelper _sqlHelper;
     private readonly DocumentStoreConfiguration _configuration;
 
     public SqlServerDocumentStore(string connectionString, DocumentStoreConfiguration configuration)
     {
-        _connectionString = connectionString;
+        _sqlHelper = new SqlServerHelper(connectionString);
         _configuration = configuration;
 
-        CreateIfNotExist(_connectionString, _configuration);
+        _sqlHelper.EnsureDatabase();
+
+        CreateTablesIfNotExists();
     }
 
     public async Task CreateAsync<Tdata>(Tdata data, CancellationToken cancellationToken = default) where Tdata : class
     {
         var id = _configuration.GetIdFromData(data);
         var json = _configuration.Serializer.ToJson(data);
-        var sql = $"INSERT INTO {GetTableName<Tdata>()} (Id, Data) values(@id, @data)";
+
+        var sql = $"INSERT INTO {GetTableName<Tdata>()} (id, data) values(@id, @data)";
+
+        var parameters = new[]
+        {
+            new SqlServerParameter("id", id.ToString() ?? ""),
+            new SqlServerParameter("data", json)
+        };
 
         try
         {
-            using var connection = new SqlConnection(_connectionString);
-            connection.Open();
-            using var cmd = new SqlCommand(sql, connection);
-            cmd.Parameters.AddWithValue("id", id.ToString());
-            cmd.Parameters.AddWithValue("data", json);
-            await cmd.ExecuteNonQueryAsync(cancellationToken);
-            connection.Close();
+            await _sqlHelper.ExecuteAsync(sql, parameters);
         }
         catch (SqlException ex) when (ex.Message.Contains("Violation of PRIMARY KEY constraint"))
         {
@@ -46,18 +49,19 @@ public class SqlServerDocumentStore : IDocumentStore
     {
         var id = _configuration.GetIdFromData(data);
         var json = _configuration.Serializer.ToJson(data);
-        var sql = $"UPDATE {GetTableName<Tdata>()} SET Data = @data WHERE Id = @id";
         int affectedRows = 0;
+
+        var sql = $"UPDATE {GetTableName<Tdata>()} SET data = @data WHERE id = @id";
+
+        var parameters = new[]
+        {
+            new SqlServerParameter("id", id.ToString() ?? ""),
+            new SqlServerParameter("data", json)
+        };
 
         try
         {
-            using var connection = new SqlConnection(_connectionString);
-            connection.Open();
-            using var cmd = new SqlCommand(sql, connection);
-            cmd.Parameters.AddWithValue("id", id.ToString());
-            cmd.Parameters.AddWithValue("data", json);
-            affectedRows = await cmd.ExecuteNonQueryAsync(cancellationToken);
-            connection.Close();
+            affectedRows = await _sqlHelper.ExecuteAsync(sql, parameters);
         }
         catch (Exception ex)
         {
@@ -72,28 +76,17 @@ public class SqlServerDocumentStore : IDocumentStore
 
     public async Task<Tdata?> GetByIdAsync<Tdata>(object id, CancellationToken cancellationToken = default) where Tdata : class
     {
-        var sql = $"SELECT Data FROM {GetTableName<Tdata>()} WHERE Id = @id";
-        var json = "";
+        var sql = $"SELECT data FROM {GetTableName<Tdata>()} WHERE id = @id";
+
+        var parameters = new[]
+        {
+            new SqlServerParameter("id", id.ToString() ?? "")
+        };
 
         try
         {
-            using var connection = new SqlConnection(_connectionString);
-            connection.Open();
-            using var cmd = new SqlCommand(sql, connection);
-            cmd.Parameters.AddWithValue("id", id.ToString());
-            using (var reader = await cmd.ExecuteReaderAsync(cancellationToken))
-            {
-                while (reader.Read())
-                {
-                    json = reader.GetString(0);
-                }
-            }
-            connection.Close();
-            if (string.IsNullOrEmpty(json))
-            {
-                return null;
-            }
-            var data = _configuration.Serializer.FromJson<Tdata>(json);
+            var json = await _sqlHelper.QuerySingleOrDefaultAsync(sql, parameters, reader => reader.GetString(0), cancellationToken);
+            var data = string.IsNullOrEmpty(json) ? null : _configuration.Serializer.FromJson<Tdata>(json);
             return data;
         }
         catch (Exception ex)
@@ -104,23 +97,12 @@ public class SqlServerDocumentStore : IDocumentStore
 
     public async IAsyncEnumerable<Tdata> GetAllAsync<Tdata>([EnumeratorCancellation] CancellationToken cancellationToken = default) where Tdata : class
     {
-        var jsonObjects = new List<string>();
-        var sql = $"SELECT Data FROM {GetTableName<Tdata>()}";
+        IEnumerable<string> jsonObjects = [];
+        var sql = $"SELECT data FROM {GetTableName<Tdata>()}";
 
         try
         {
-            using var connection = new SqlConnection(_connectionString);
-            connection.Open();
-            using var cmd = new SqlCommand(sql, connection);
-            using (var reader = await cmd.ExecuteReaderAsync(cancellationToken))
-            {
-                while (reader.Read())
-                {
-                    var json = reader.GetString(0);
-                    jsonObjects.Add(json);
-                }
-            }
-            connection.Close();
+            jsonObjects = await _sqlHelper.QueryAsync(sql, [], reader => reader.GetString(0), cancellationToken);
         }
         catch (Exception ex)
         {
@@ -141,14 +123,14 @@ public class SqlServerDocumentStore : IDocumentStore
     {
         var sql = $"DELETE FROM {GetTableName<Tdata>()} WHERE Id = @id";
 
+        var parameters = new[]
+        {
+            new SqlServerParameter("id", id.ToString() ?? "")
+        };
+
         try
         {
-            using var connection = new SqlConnection(_connectionString);
-            connection.Open();
-            using var cmd = new SqlCommand(sql, connection);
-            cmd.Parameters.AddWithValue("id", id.ToString());
-            await cmd.ExecuteNonQueryAsync(cancellationToken);
-            connection.Close();
+            await _sqlHelper.ExecuteAsync(sql, parameters, cancellationToken);
         }
         catch (Exception ex)
         {
@@ -162,11 +144,7 @@ public class SqlServerDocumentStore : IDocumentStore
 
         try
         {
-            using var connection = new SqlConnection(_connectionString);
-            connection.Open();
-            using var cmd = new SqlCommand(sql, connection);
-            await cmd.ExecuteNonQueryAsync(cancellationToken);
-            connection.Close();
+            await _sqlHelper.ExecuteAsync(sql, [], cancellationToken);
         }
         catch (Exception ex)
         {
@@ -179,71 +157,28 @@ public class SqlServerDocumentStore : IDocumentStore
         return typeof(Tdata).Name;
     }
 
-    private static void CreateIfNotExist(string connectionString, DocumentStoreConfiguration configuration)
+    private void CreateTablesIfNotExists()
     {
-        var connectionProperties = connectionString
-            .Split(';')
-            .Select(x => x.Trim())
-            .Where(x => !string.IsNullOrWhiteSpace(x))
-            .Select(x =>
-            {
-                var values = x.Split('=');
-                return new { Key = values[0], Value = values[1] };
-            });
+        var tableNames = _configuration.IdConverters.Select(x => x.Key.Name).ToArray();
 
-        var connectionPropertiesWithoutDatabase = connectionProperties
-            .Where(x => !x.Key.StartsWith("database", StringComparison.OrdinalIgnoreCase));
-
-        var connectionStringWithoutDatabase = string.Join(';', connectionPropertiesWithoutDatabase.Select(x => $"{x.Key}={x.Value}"));
-
-        var databaseName = connectionProperties
-            .Where(x => x.Key.StartsWith("database", StringComparison.OrdinalIgnoreCase))
-            .Select(x => x.Value)
-            .Single();
-
-        CreateDatabaseIfNotExists(connectionStringWithoutDatabase, databaseName);
-
-        CreateTablesIfNotExists(connectionString, configuration.IdConverters.Select(x => x.Key.Name).ToArray());
-    }
-
-    private static void CreateDatabaseIfNotExists(string connectionString, string databaseName)
-    {
         try
         {
-            using var connection = new SqlConnection(connectionString);
-            connection.Open();
-            var sql = $@"IF NOT EXISTS(SELECT * FROM sys.databases WHERE name = '{databaseName}')
-                         CREATE DATABASE [{databaseName}]";
-            using var cmd = new SqlCommand(sql, connection);
-            cmd.ExecuteNonQuery();
-            connection.Close();
-        }
-        catch (Exception ex)
-        {
-            throw new DocumentStoreException("Could not create database", ex);
-        }
-    }
-
-    private static void CreateTablesIfNotExists(string connectionString, params string[] tableNames)
-    {
-        try
-        {
-            using var connection = new SqlConnection(connectionString);
-            connection.Open();
-            using var transaction = connection.BeginTransaction();
-            foreach (var tableName in tableNames)
+            _sqlHelper.Transaction(async (conn, tx) =>
             {
-                var sql = $@"IF OBJECT_ID(N'dbo.{tableName}', N'U') IS NULL
+                foreach (var tableName in tableNames)
+                {
+                    var sql = $@"IF OBJECT_ID(N'dbo.{tableName}', N'U') IS NULL
                                 CREATE TABLE dbo.{tableName} (
                                     Id varchar(50), 
                                     Data varchar(MAX),
                                     PRIMARY KEY (Id)
                                 );";
-                using var cmd = new SqlCommand(sql, connection, transaction);
-                cmd.ExecuteNonQuery();
-            }
-            transaction.Commit();
-            connection.Close();
+
+                    await _sqlHelper.ExecuteAsync(sql, [], conn, tx);
+                }
+            })
+            .GetAwaiter()
+            .GetResult();
         }
         catch (Exception ex)
         {

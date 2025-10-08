@@ -7,32 +7,35 @@ namespace Basses.SimpleDocumentStore.PostgreSql;
 
 public class PostgreSqlDocumentStore : IDocumentStore
 {
-    private readonly string _connectionString;
+    private readonly PostgreSqlHelper _sqlHelper;
     private readonly DocumentStoreConfiguration _configuration;
 
     public PostgreSqlDocumentStore(string connectionString, DocumentStoreConfiguration configuration)
     {
-        _connectionString = connectionString;
+        _sqlHelper = new PostgreSqlHelper(connectionString);
         _configuration = configuration;
 
-        CreateIfNotExist(_connectionString, _configuration);
+        _sqlHelper.EnsureDatabase();
+
+        CreateTablesIfNotExists();
     }
 
     public async Task CreateAsync<Tdata>(Tdata data, CancellationToken cancellationToken = default) where Tdata : class
     {
         var id = _configuration.GetIdFromData(data);
         var json = _configuration.Serializer.ToJson(data);
+
         var sql = $"INSERT INTO {GetTableName<Tdata>()} (id, data) values(@id, @data)";
+
+        var parameters = new[]
+        {
+            new PostgreSqlParameter("id", id.ToString() ?? ""),
+            new PostgreSqlParameter("data", json, NpgsqlDbType.Jsonb)
+        };
 
         try
         {
-            using var connection = new NpgsqlConnection(_connectionString);
-            connection.Open();
-            using var cmd = new NpgsqlCommand(sql, connection);
-            cmd.Parameters.AddWithValue("id", id.ToString() ?? "");
-            cmd.Parameters.AddWithValue("data", NpgsqlDbType.Jsonb, json);
-            await cmd.ExecuteNonQueryAsync(cancellationToken);
-            connection.Close();
+            await _sqlHelper.ExecuteAsync(sql, parameters);
         }
         catch (PostgresException ex) when (ex.Message.Contains("23505: duplicate key value violates unique constraint"))
         {
@@ -48,18 +51,19 @@ public class PostgreSqlDocumentStore : IDocumentStore
     {
         var id = _configuration.GetIdFromData(data);
         var json = _configuration.Serializer.ToJson(data);
-        var sql = $"UPDATE {GetTableName<Tdata>()} SET data = @data WHERE id = @id";
         int affectedRows = 0;
+
+        var sql = $"UPDATE {GetTableName<Tdata>()} SET data = @data WHERE id = @id";
+
+        var parameters = new[]
+        {
+            new PostgreSqlParameter("id", id.ToString() ?? ""),
+            new PostgreSqlParameter("data", json, NpgsqlDbType.Jsonb)
+        };
 
         try
         {
-            using var connection = new NpgsqlConnection(_connectionString);
-            connection.Open();
-            using var cmd = new NpgsqlCommand(sql, connection);
-            cmd.Parameters.AddWithValue("id", id.ToString() ?? "");
-            cmd.Parameters.AddWithValue("data", NpgsqlDbType.Jsonb, json);
-            affectedRows = await cmd.ExecuteNonQueryAsync(cancellationToken);
-            connection.Close();
+            affectedRows = await _sqlHelper.ExecuteAsync(sql, parameters);
         }
         catch (Exception ex)
         {
@@ -75,27 +79,16 @@ public class PostgreSqlDocumentStore : IDocumentStore
     public async Task<Tdata?> GetByIdAsync<Tdata>(object id, CancellationToken cancellationToken = default) where Tdata : class
     {
         var sql = $"SELECT data FROM {GetTableName<Tdata>()} WHERE id = @id";
-        var json = "";
+
+        var parameters = new[]
+        {
+            new PostgreSqlParameter("id", id.ToString() ?? "")
+        };
 
         try
         {
-            using var connection = new NpgsqlConnection(_connectionString);
-            connection.Open();
-            using var cmd = new NpgsqlCommand(sql, connection);
-            cmd.Parameters.AddWithValue("id", id.ToString() ?? "");
-            using (var reader = await cmd.ExecuteReaderAsync(cancellationToken))
-            {
-                while (reader.Read())
-                {
-                    json = reader.GetString(0);
-                }
-            }
-            connection.Close();
-            if (string.IsNullOrEmpty(json))
-            {
-                return null;
-            }
-            var data = _configuration.Serializer.FromJson<Tdata>(json);
+            var json = await _sqlHelper.QuerySingleOrDefaultAsync(sql, parameters, reader => reader.GetString(0), cancellationToken);
+            var data = string.IsNullOrEmpty(json) ? null : _configuration.Serializer.FromJson<Tdata>(json);
             return data;
         }
         catch (Exception ex)
@@ -106,23 +99,12 @@ public class PostgreSqlDocumentStore : IDocumentStore
 
     public async IAsyncEnumerable<Tdata> GetAllAsync<Tdata>([EnumeratorCancellation] CancellationToken cancellationToken = default) where Tdata : class
     {
-        List<string> jsonObjects = [];
+        IEnumerable<string> jsonObjects = [];
         var sql = $"SELECT data FROM {GetTableName<Tdata>()}";
 
         try
         {
-            using var connection = new NpgsqlConnection(_connectionString);
-            connection.Open();
-            using var cmd = new NpgsqlCommand(sql, connection);
-            using (var reader = await cmd.ExecuteReaderAsync(cancellationToken))
-            {
-                while (reader.Read())
-                {
-                    var json = reader.GetString(0);
-                    jsonObjects.Add(json);
-                }
-            }
-            connection.Close();
+            jsonObjects = await _sqlHelper.QueryAsync(sql, [], reader => reader.GetString(0), cancellationToken);
         }
         catch (Exception ex)
         {
@@ -143,14 +125,14 @@ public class PostgreSqlDocumentStore : IDocumentStore
     {
         var sql = $"DELETE FROM {GetTableName<Tdata>()} WHERE id = @id";
 
+        var parameters = new[]
+        {
+            new PostgreSqlParameter("id", id.ToString() ?? "")
+        };
+
         try
         {
-            using var connection = new NpgsqlConnection(_connectionString);
-            connection.Open();
-            using var cmd = new NpgsqlCommand(sql, connection);
-            cmd.Parameters.AddWithValue("id", id.ToString() ?? "");
-            await cmd.ExecuteNonQueryAsync(cancellationToken);
-            connection.Close();
+            await _sqlHelper.ExecuteAsync(sql, parameters, cancellationToken);
         }
         catch (Exception ex)
         {
@@ -164,11 +146,7 @@ public class PostgreSqlDocumentStore : IDocumentStore
 
         try
         {
-            using var connection = new NpgsqlConnection(_connectionString);
-            connection.Open();
-            using var cmd = new NpgsqlCommand(sql, connection);
-            await cmd.ExecuteNonQueryAsync(cancellationToken);
-            connection.Close();
+            await _sqlHelper.ExecuteAsync(sql, [], cancellationToken);
         }
         catch (Exception ex)
         {
@@ -186,66 +164,13 @@ public class PostgreSqlDocumentStore : IDocumentStore
         return Regex.Replace(typeName, @"(?<!_|^)([A-Z])", "_$1").ToLower();
     }
 
-    private static void CreateIfNotExist(string connectionString, DocumentStoreConfiguration configuration)
+    private void CreateTablesIfNotExists()
     {
-        var connectionProperties = connectionString
-            .Split(';')
-            .Select(x => x.Trim())
-            .Where(x => !string.IsNullOrWhiteSpace(x))
-            .Select(x =>
-            {
-                var values = x.Split('=');
-                return new { Key = values[0], Value = values[1] };
-            });
+        var tableNames = _configuration.IdConverters.Select(x => TableNameFromTypeName(x.Key.Name)).ToArray();
 
-        var connectionPropertiesWithoutDatabase = connectionProperties
-            .Where(x => !x.Key.StartsWith("database", StringComparison.OrdinalIgnoreCase));
-
-        var connectionStringWithoutDatabase = string.Join(';', connectionPropertiesWithoutDatabase.Select(x => $"{x.Key}={x.Value}"));
-
-        var databaseName = connectionProperties
-            .Where(x => x.Key.StartsWith("database", StringComparison.OrdinalIgnoreCase))
-            .Select(x => x.Value)
-            .Single();
-
-        CreateDatabaseIfNotExists(connectionStringWithoutDatabase, databaseName);
-
-        CreateTablesIfNotExists(connectionString, configuration.IdConverters.Select(x => TableNameFromTypeName(x.Key.Name)).ToArray());
-    }
-
-    private static void CreateDatabaseIfNotExists(string connectionString, string databaseName)
-    {
         try
         {
-            using var connection = new NpgsqlConnection(connectionString);
-            connection.Open();
-            var sql1 = $"SELECT COUNT(*) FROM pg_database WHERE datname = '{databaseName}'";
-            using var cmd1 = new NpgsqlCommand(sql1);
-            cmd1.Connection = connection;
-            var tableCount = (long)(cmd1.ExecuteScalar() ?? 0);
-            if (tableCount == 0)
-            {
-                var sql2 = $"CREATE DATABASE {databaseName}";
-                using var cmd2 = new NpgsqlCommand(sql2);
-                cmd2.Connection = connection;
-                cmd2.ExecuteNonQuery();
-            }
-            connection.Close();
-        }
-        catch (Exception ex)
-        {
-            throw new SimpleDocumentStoreException("Could not create database", ex);
-        }
-    }
-
-    private static void CreateTablesIfNotExists(string connectionString, params string[] tableNames)
-    {
-        try
-        {
-            using var connection = new NpgsqlConnection(connectionString);
-            connection.Open();
-            using var transaction = connection.BeginTransaction();
-            foreach (var tableName in tableNames)
+            _sqlHelper.Transaction(async (conn, tx) =>
             {
                 foreach (var tableName in tableNames)
                 {
@@ -254,11 +179,12 @@ public class PostgreSqlDocumentStore : IDocumentStore
                                 data jsonb,
                                 PRIMARY KEY (id)
                             );";
-                using var cmd = new NpgsqlCommand(sql, connection, transaction);
-                cmd.ExecuteNonQuery();
-            }
-            transaction.Commit();
-            connection.Close();
+
+                    await _sqlHelper.ExecuteAsync(sql, [], conn, tx);
+                }
+            })
+            .GetAwaiter()
+            .GetResult();
         }
         catch (Exception ex)
         {
