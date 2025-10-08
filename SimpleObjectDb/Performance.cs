@@ -1,12 +1,33 @@
 ﻿using System.Diagnostics;
 using AutoFixture;
 using Basses.SimpleDocumentStore;
+using Basses.SimpleDocumentStore.Files;
+using Basses.SimpleDocumentStore.InMemory;
+using Basses.SimpleDocumentStore.PostgreSql;
+using Basses.SimpleDocumentStore.SqlServer;
 
 namespace SimpleObjectDb;
 
-public static class PerformanceStats
+internal static class Performance
 {
-    public static async Task Run(IDocumentStore db)
+    public static async Task Run()
+    {
+        DocumentStoreConfiguration config = new();
+        config.RegisterDataType<TestObjectA>(i => i.Id);
+        config.RegisterDataType<TestObjectB>(i => i.Id);
+
+        IDocumentStore inMemoryDb = new InMemoryDocumentStore(config);
+        IDocumentStore fileDb = new FileDocumentStore(Constants.FileConnectionString, config);
+        IDocumentStore sqlserverDb = new SqlServerDocumentStore(Constants.SqlServerConnectionString, config);
+        IDocumentStore postgresDb = new PostgreSqlDocumentStore(Constants.PostgresConnectionString, config);
+
+        await RunTest(inMemoryDb);
+        await RunTest(fileDb);
+        await RunTest(sqlserverDb);
+        await RunTest(postgresDb);
+    }
+
+    public static async Task RunTest(IDocumentStore store)
     {
         Fixture fixture = new();
         Stopwatch stopwatch = new();
@@ -16,9 +37,9 @@ public static class PerformanceStats
         // Test with many small objects
         // ==============================
 
-        Console.WriteLine("--------------------------------------------------------------------------------");
-        Console.WriteLine($"Starting performance test of: {db.GetType().Name}");
-        Console.WriteLine("--------------------------------------------------------------------------------");
+        Console.WriteLine("----------------------------------------------------------------------------");
+        Console.WriteLine($"Starting performance test of: {store.GetType().Name}");
+        Console.WriteLine("----------------------------------------------------------------------------");
 
         LogAction($"Creating test objects");
         stopwatch.Start();
@@ -39,7 +60,7 @@ public static class PerformanceStats
         stopwatch.Restart();
         foreach (var item in smallTestObjects)
         {
-            await db.CreateAsync(item);
+            await store.CreateAsync(item);
         }
         stopwatch.Stop();
         LogExecutionTime(stopwatch);
@@ -49,7 +70,7 @@ public static class PerformanceStats
         stopwatch.Restart();
         foreach (var item in smallTestObjects)
         {
-            var storedItem = await db.GetByIdAsync<TestObjectA>(item.Id);
+            var storedItem = await store.GetByIdAsync<TestObjectA>(item.Id);
         }
         stopwatch.Stop();
         LogExecutionTime(stopwatch);
@@ -60,7 +81,7 @@ public static class PerformanceStats
         foreach (var item in smallTestObjects)
         {
             var newItem = item with { Text = fixture.Create<string>() };
-            await db.UpdateAsync(newItem);
+            await store.UpdateAsync(newItem);
         }
         stopwatch.Stop();
         LogExecutionTime(stopwatch);
@@ -69,7 +90,7 @@ public static class PerformanceStats
         LogAction($"Fetching {smallTestObjects.Count()} small items from db at once");
         stopwatch.Restart();
         var allItems = new List<TestObjectA>();
-        var enumerator = db.GetAllAsync<TestObjectA>().GetAsyncEnumerator();
+        var enumerator = store.GetAllAsync<TestObjectA>().GetAsyncEnumerator();
         try
         {
             while (await enumerator.MoveNextAsync()) { allItems.Add(enumerator.Current); }
@@ -86,7 +107,7 @@ public static class PerformanceStats
         stopwatch.Restart();
         foreach (var item in smallTestObjects)
         {
-            await db.DeleteByIdAsync<TestObjectA>(item.Id);
+            await store.DeleteByIdAsync<TestObjectA>(item.Id);
         }
         stopwatch.Stop();
         LogExecutionTime(stopwatch);
@@ -100,7 +121,7 @@ public static class PerformanceStats
         stopwatch.Start();
         foreach (var item in largeTestObjects)
         {
-            await db.CreateAsync(item);
+            await store.CreateAsync(item);
         }
         stopwatch.Stop();
         LogExecutionTime(stopwatch);
@@ -110,7 +131,7 @@ public static class PerformanceStats
         foreach (var item in largeTestObjects)
         {
             var newItem = item with { Values = fixture.CreateMany<TestSubObjectB>(500).ToArray() };
-            await db.UpdateAsync(newItem);
+            await store.UpdateAsync(newItem);
         }
         stopwatch.Stop();
         LogExecutionTime(stopwatch);
@@ -119,7 +140,7 @@ public static class PerformanceStats
         stopwatch.Restart();
         foreach (var item in largeTestObjects)
         {
-            await db.DeleteByIdAsync<TestObjectB>(item.Id);
+            await store.DeleteByIdAsync<TestObjectB>(item.Id);
         }
         stopwatch.Stop();
         LogExecutionTime(stopwatch);
