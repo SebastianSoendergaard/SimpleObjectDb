@@ -1,5 +1,5 @@
 # SimpleDocumentStore
-Easy way to store objects in a No SQL way.
+Easy way to store objects as documents without messing with any SQL or raw files.
 
 The solution consists of a generic interface that can be used by the application. The interface can be backed by different storage solutions. Currently the solution supports raw files, MS SQL Server and PostgreSql as backing options. An in-memory implementation is also provided for testing purposes.
 
@@ -26,19 +26,19 @@ Uses PostgreSql as backing database. Each object type has a dedicated table with
 
 ### Usage
 
-To add to your project, add as a nuget package:
+To add to your project, add as a nuget package for file store:
 
 ```
 dotnet package add Basses.SimpleDocumentStore
 ```
 
-or
+or for MS SQL Server
 
 ```
 dotnet package add Basses.SimpleDocumentStore.SqlServer
 ```
 
-or
+or for PostgreSQL
 
 ```
 dotnet package add Basses.SimpleDocumentStore.PostgreSql
@@ -58,7 +58,7 @@ To run the eaxmples spin up docker with the required databases using docker comp
 
 #### Perfomance
 
-The example application will execute some actions against the different database implementations and log the execution times. The actual results will ofcause depend a lot on the machine running the application but the test will at least give some hints to how the performance is.
+The example application will execute some actions against the different database implementations and log the execution times. The actual results will of cause depend a lot on the machine running the application but the test will at least give some hints to how the performance is.
 
 On my machine the output looks like this:
 

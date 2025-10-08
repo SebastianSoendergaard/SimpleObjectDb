@@ -13,15 +13,18 @@
 By using this you will have real persistency without any effort, this gives you time to fully implement your solution while postponing the desision of the actual data storage solution until the very last minute.
 In some cases you may even find that using this is sufficient as the actual store solution. Especially in small application where high performance is not required.
 </Description>
+    <Authors>Sebastian Søndergaard</Authors>
     <PackageIcon>simple_document_store.png</PackageIcon>
-    <RepositoryType>git</RepositoryType>
     <PackageTags>document;store;database;nosql;postgres;postgresql;json</PackageTags>
-    <PackageReleaseNotes>Initial version</PackageReleaseNotes>
+    <PackageReleaseNotes>$([System.IO.File]::ReadAllText("RELEASE_NOTES.txt"))</PackageReleaseNotes>
+    <RepositoryUrl>https://github.com/SebastianSoendergaard/SimpleObjectDb.git</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
   </PropertyGroup>
 
   <ItemGroup>
+    <Content Include="..\RELEASE_NOTES.txt" Link="RELEASE_NOTES.txt" />
     <Content Include="simple_document_store.ico" />
   </ItemGroup>
 

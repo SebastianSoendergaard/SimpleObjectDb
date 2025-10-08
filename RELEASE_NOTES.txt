@@ -1,0 +1,11 @@
+v. 0.0.3
+- Upgrade to .net9
+- Add in-memory implementation
+- Add support for specifying serialization
+- Rename a lot of types
+
+v. 0.0.2
+- Minor changes
+
+v. 0.0.1
+- Initial version
