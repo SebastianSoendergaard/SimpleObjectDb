@@ -5,10 +5,15 @@ public class DocumentStoreConfiguration
     public IDocumentStoreSerializer Serializer { get; set; } = new DefaultDocumentStoreSerializer();
 
     public Dictionary<Type, IIdConverter> IdConverters { get; } = [];
-    public DocumentStoreConfiguration RegisterDataType<Tdata>(Func<Tdata, object> dataTypeToIdValue) where Tdata : class
+    public Dictionary<Type, string> Schemas { get; } = [];
+    public DocumentStoreConfiguration RegisterDataType<Tdata>(Func<Tdata, object> dataTypeToIdValue, string? schema = null) where Tdata : class
     {
         var converter = new TypedIdConverter<Tdata>(dataTypeToIdValue);
         IdConverters.Add(typeof(Tdata), converter);
+        if (schema != null)
+        {
+            Schemas.Add(typeof(Tdata), schema);
+        }
         return this;
     }
 
@@ -43,5 +48,10 @@ public class DocumentStoreConfiguration
         }
 
         return typedConverter.GetId(data);
+    }
+
+    public string? TryGetSchema(Type type)
+    {
+        return Schemas.TryGetValue(type, out var schema) ? schema : null;
     }
 }

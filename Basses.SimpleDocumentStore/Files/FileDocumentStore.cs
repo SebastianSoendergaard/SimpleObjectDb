@@ -4,15 +4,16 @@ namespace Basses.SimpleDocumentStore.Files;
 
 public class FileDocumentStore : IDocumentStore
 {
-    private readonly string _directoryPath;
     private readonly DocumentStoreConfiguration _configuration;
+
+    public string DirectoryPath { get; private set; }
 
     public FileDocumentStore(string directoryPath, DocumentStoreConfiguration configuration)
     {
-        _directoryPath = directoryPath;
+        DirectoryPath = directoryPath;
         _configuration = configuration;
 
-        Directory.CreateDirectory(_directoryPath);
+        Directory.CreateDirectory(DirectoryPath);
     }
 
     public async Task CreateAsync<Tdata>(Tdata data, CancellationToken cancellationToken = default) where Tdata : class
@@ -111,11 +112,19 @@ public class FileDocumentStore : IDocumentStore
             throw new ArgumentNullException($"Id for {typeof(Tdata).FullName} cannot be empty");
         }
 
-        return Path.Combine(_directoryPath, typeof(Tdata).Name, idString + ".json");
+        return Path.Combine(CreateDirectoryPath<Tdata>(), idString + ".json");
     }
 
     private string CreateDirectoryPath<Tdata>() where Tdata : class
     {
-        return Path.Combine(_directoryPath, typeof(Tdata).Name);
+        var schema = _configuration.TryGetSchema(typeof(Tdata));
+        if (schema != null)
+        {
+            return Path.Combine(DirectoryPath, schema, typeof(Tdata).Name);
+        }
+        else
+        {
+            return Path.Combine(DirectoryPath, typeof(Tdata).Name);
+        }
     }
 }

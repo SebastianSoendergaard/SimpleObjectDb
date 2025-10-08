@@ -8,8 +8,12 @@ public class SqlServerDocumentStore : IDocumentStore
     private readonly SqlServerHelper _sqlHelper;
     private readonly DocumentStoreConfiguration _configuration;
 
+    public string ConnectionString { get; private set; }
+
     public SqlServerDocumentStore(string connectionString, DocumentStoreConfiguration configuration)
     {
+        ConnectionString = connectionString;
+
         _sqlHelper = new SqlServerHelper(connectionString);
         _configuration = configuration;
 
@@ -154,21 +158,50 @@ public class SqlServerDocumentStore : IDocumentStore
 
     private string GetTableName<Tdata>()
     {
-        return typeof(Tdata).Name;
+        return GetTableName(typeof(Tdata));
+    }
+
+    private string GetTableName(Type type)
+    {
+        var schema = _configuration.TryGetSchema(type);
+        if (schema != null)
+        {
+            return $"{schema}.{type.Name}";
+        }
+        else
+        {
+            return type.Name;
+        }
     }
 
     private void CreateTablesIfNotExists()
     {
-        var tableNames = _configuration.IdConverters.Select(x => x.Key.Name).ToArray();
+        var schemas = _configuration.Schemas.Select(x => x.Value);
+        var tableNames = _configuration.IdConverters.Select(x => GetTableName(x.Key));
 
         try
         {
             _sqlHelper.Transaction(async (conn, tx) =>
             {
+                foreach (var schema in schemas)
+                {
+                    var sql = $@"
+                        IF NOT EXISTS (
+                            SELECT 1 
+                            FROM sys.schemas 
+                            WHERE name = '{schema}'
+                        )
+                        BEGIN
+                            EXEC('CREATE SCHEMA {schema}');
+                        END";
+
+                    await _sqlHelper.ExecuteAsync(sql, [], conn, tx);
+                }
+
                 foreach (var tableName in tableNames)
                 {
-                    var sql = $@"IF OBJECT_ID(N'dbo.{tableName}', N'U') IS NULL
-                                CREATE TABLE dbo.{tableName} (
+                    var sql = $@"IF OBJECT_ID(N'{tableName}', N'U') IS NULL
+                                CREATE TABLE {tableName} (
                                     Id varchar(50), 
                                     Data varchar(MAX),
                                     PRIMARY KEY (Id)

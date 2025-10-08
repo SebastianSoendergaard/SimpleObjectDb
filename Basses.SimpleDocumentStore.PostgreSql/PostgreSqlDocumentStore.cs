@@ -10,8 +10,12 @@ public class PostgreSqlDocumentStore : IDocumentStore
     private readonly PostgreSqlHelper _sqlHelper;
     private readonly DocumentStoreConfiguration _configuration;
 
+    public string ConnectionString { get; private set; }
+
     public PostgreSqlDocumentStore(string connectionString, DocumentStoreConfiguration configuration)
     {
+        ConnectionString = connectionString;
+
         _sqlHelper = new PostgreSqlHelper(connectionString);
         _configuration = configuration;
 
@@ -154,9 +158,22 @@ public class PostgreSqlDocumentStore : IDocumentStore
         }
     }
 
-    private static string GetTableName<Tdata>()
+    private string GetTableName<Tdata>()
     {
-        return TableNameFromTypeName(typeof(Tdata).Name);
+        return GetTableName(typeof(Tdata));
+    }
+
+    private string GetTableName(Type type)
+    {
+        var schema = _configuration.TryGetSchema(type);
+        if (schema != null)
+        {
+            return $"{schema}.{TableNameFromTypeName(type.Name)}";
+        }
+        else
+        {
+            return TableNameFromTypeName(type.Name);
+        }
     }
 
     private static string TableNameFromTypeName(string typeName)
@@ -166,15 +183,23 @@ public class PostgreSqlDocumentStore : IDocumentStore
 
     private void CreateTablesIfNotExists()
     {
-        var tableNames = _configuration.IdConverters.Select(x => TableNameFromTypeName(x.Key.Name)).ToArray();
+        var schemas = _configuration.Schemas.Select(x => x.Value);
+        var tableNames = _configuration.IdConverters.Select(x => GetTableName(x.Key));
 
         try
         {
             _sqlHelper.Transaction(async (conn, tx) =>
             {
+                foreach (var schema in schemas)
+                {
+                    var sql = $"CREATE SCHEMA IF NOT EXISTS {schema}";
+
+                    await _sqlHelper.ExecuteAsync(sql, [], conn, tx);
+                }
+
                 foreach (var tableName in tableNames)
                 {
-                    var sql = $@"CREATE TABLE IF NOT EXISTS public.{tableName} (
+                    var sql = $@"CREATE TABLE IF NOT EXISTS {tableName} (
                                 id varchar(50), 
                                 data jsonb,
                                 PRIMARY KEY (id)
