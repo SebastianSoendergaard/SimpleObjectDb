@@ -2,6 +2,8 @@
 
 public class DocumentStoreConfiguration
 {
+    public IDocumentStoreSerializer Serializer { get; set; } = new DefaultDocumentStoreSerializer();
+
     public Dictionary<Type, IIdConverter> IdConverters { get; } = [];
     public DocumentStoreConfiguration RegisterDataType<Tdata>(Func<Tdata, object> dataTypeToIdValue) where Tdata : class
     {

@@ -1,5 +1,4 @@
 ﻿using System.Runtime.CompilerServices;
-using System.Text.Json;
 
 namespace Basses.SimpleDocumentStore.Files;
 
@@ -27,7 +26,7 @@ public class FileDocumentStore : IDocumentStore
 
         Directory.CreateDirectory(Path.GetDirectoryName(path) ?? throw new ArgumentNullException("Path cannot be null"));
 
-        var json = JsonSerializer.Serialize(data);
+        var json = _configuration.Serializer.ToJson(data);
         await File.WriteAllTextAsync(path, json, cancellationToken);
     }
 
@@ -40,7 +39,7 @@ public class FileDocumentStore : IDocumentStore
             throw new NotFoundException($"Id for {typeof(Tdata).FullName} not found");
         }
 
-        var json = JsonSerializer.Serialize(data);
+        var json = _configuration.Serializer.ToJson(data);
         await File.WriteAllTextAsync(path, json, cancellationToken);
     }
 
@@ -53,7 +52,7 @@ public class FileDocumentStore : IDocumentStore
         }
 
         var json = await File.ReadAllTextAsync(path, cancellationToken);
-        var data = JsonSerializer.Deserialize<Tdata>(json);
+        var data = _configuration.Serializer.FromJson<Tdata>(json);
         return data;
     }
 
@@ -66,7 +65,7 @@ public class FileDocumentStore : IDocumentStore
             cancellationToken.ThrowIfCancellationRequested();
 
             var json = await File.ReadAllTextAsync(file, cancellationToken);
-            var data = JsonSerializer.Deserialize<Tdata>(json);
+            var data = _configuration.Serializer.FromJson<Tdata>(json);
             if (data != null)
             {
                 yield return data;

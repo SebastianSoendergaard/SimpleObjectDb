@@ -20,3 +20,8 @@ public class NotFoundException : SimpleDocumentStoreException
 {
     public NotFoundException(string message) : base(message) { }
 }
+
+public class DeserializeException : SimpleDocumentStoreException
+{
+    public DeserializeException(string message, Type dataType, string data) : base(message) { }
+}

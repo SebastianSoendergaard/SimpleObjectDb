@@ -1,5 +1,4 @@
 ﻿using System.Runtime.CompilerServices;
-using System.Text.Json;
 
 namespace Basses.SimpleDocumentStore.InMemory;
 
@@ -28,7 +27,7 @@ public class InMemoryDocumentStore : IDocumentStore
             throw new AlreadyExistException($"Id for {typeof(Tdata).FullName} already exist");
         }
 
-        var json = JsonSerializer.Serialize(data);
+        var json = _configuration.Serializer.ToJson(data);
 
         collection.Add(id, json);
         return Task.CompletedTask;
@@ -55,7 +54,7 @@ public class InMemoryDocumentStore : IDocumentStore
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            var data = JsonSerializer.Deserialize<Tdata>(json);
+            var data = _configuration.Serializer.FromJson<Tdata>(json);
             if (data != null)
             {
                 yield return await Task.FromResult(data);
@@ -68,8 +67,8 @@ public class InMemoryDocumentStore : IDocumentStore
         var collection = GetDocumentCollection<Tdata>();
         if (collection.TryGetValue(id, out var json))
         {
-            var data = JsonSerializer.Deserialize<Tdata>(json);
-            return Task.FromResult(data);
+            var data = _configuration.Serializer.FromJson<Tdata>(json);
+            return Task.FromResult((Tdata?)data);
         }
         return Task.FromResult<Tdata?>(null);
     }
@@ -84,7 +83,7 @@ public class InMemoryDocumentStore : IDocumentStore
             throw new NotFoundException($"Id for {typeof(Tdata).FullName} not found");
         }
 
-        var json = JsonSerializer.Serialize(data);
+        var json = _configuration.Serializer.ToJson(data);
 
         collection[id] = json;
         return Task.CompletedTask;

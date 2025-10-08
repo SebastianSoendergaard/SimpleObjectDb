@@ -1,5 +1,4 @@
 ﻿using System.Runtime.CompilerServices;
-using System.Text.Json;
 using Microsoft.Data.SqlClient;
 
 namespace Basses.SimpleDocumentStore.SqlServer;
@@ -20,7 +19,7 @@ public class SqlServerDocumentStore : IDocumentStore
     public async Task CreateAsync<Tdata>(Tdata data, CancellationToken cancellationToken = default) where Tdata : class
     {
         var id = _configuration.GetIdFromData(data);
-        var json = JsonSerializer.Serialize(data);
+        var json = _configuration.Serializer.ToJson(data);
         var sql = $"INSERT INTO {GetTableName<Tdata>()} (Id, Data) values(@id, @data)";
 
         try
@@ -46,7 +45,7 @@ public class SqlServerDocumentStore : IDocumentStore
     public async Task UpdateAsync<Tdata>(Tdata data, CancellationToken cancellationToken = default) where Tdata : class
     {
         var id = _configuration.GetIdFromData(data);
-        var json = JsonSerializer.Serialize(data);
+        var json = _configuration.Serializer.ToJson(data);
         var sql = $"UPDATE {GetTableName<Tdata>()} SET Data = @data WHERE Id = @id";
         int affectedRows = 0;
 
@@ -94,7 +93,7 @@ public class SqlServerDocumentStore : IDocumentStore
             {
                 return null;
             }
-            var data = JsonSerializer.Deserialize<Tdata>(json);
+            var data = _configuration.Serializer.FromJson<Tdata>(json);
             return data;
         }
         catch (Exception ex)
@@ -130,7 +129,7 @@ public class SqlServerDocumentStore : IDocumentStore
 
         foreach (var json in jsonObjects)
         {
-            var data = JsonSerializer.Deserialize<Tdata>(json);
+            var data = _configuration.Serializer.FromJson<Tdata>(json);
             if (data != null)
             {
                 yield return data;

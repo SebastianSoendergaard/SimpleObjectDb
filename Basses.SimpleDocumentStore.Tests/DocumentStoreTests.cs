@@ -15,6 +15,8 @@ public sealed class DocumentStoreTests :
     private static PostgreSqlStoreFixture? _postgreSqlStoreFixture;
     private static SqlServerStoreFixture? _sqlServerStoreFixture;
 
+    private DocumentStoreConfiguration _config = new DocumentStoreConfiguration();
+
     public DocumentStoreTests(
         InMemoryStoreFixture inMemoryStoreFixture,
         FileStoreFixture fileStoreFixture,
@@ -25,13 +27,16 @@ public sealed class DocumentStoreTests :
         _fileStoreFixture = fileStoreFixture;
         _postgreSqlStoreFixture = postgreSqlStoreFixture;
         _sqlServerStoreFixture = sqlServerStoreFixture;
+
+        _config.RegisterDataType<TestObjectA>(x => x.Id);
+        _config.RegisterDataType<TestObjectB>(x => x.Id);
     }
 
     [Theory]
     [MemberData(nameof(DocumentStoreFactory))]
-    public async Task ReturnsNullWhenNoDocument(Func<IDocumentStore> documentStoreFactory)
+    public async Task ReturnsNullWhenNoDocument(Func<DocumentStoreConfiguration, IDocumentStore> documentStoreFactory)
     {
-        var store = documentStoreFactory();
+        var store = documentStoreFactory(_config);
         await store.DeleteAllAsync<TestObjectA>();
 
         var id = _fixture.Create<int>();
@@ -42,9 +47,9 @@ public sealed class DocumentStoreTests :
 
     [Theory]
     [MemberData(nameof(DocumentStoreFactory))]
-    public async Task CanCreateAndGetADocument(Func<IDocumentStore> documentStoreFactory)
+    public async Task CanCreateAndGetADocument(Func<DocumentStoreConfiguration, IDocumentStore> documentStoreFactory)
     {
-        var store = documentStoreFactory();
+        var store = documentStoreFactory(_config);
         await store.DeleteAllAsync<TestObjectA>();
 
         var obj = _fixture.Create<TestObjectA>();
@@ -58,9 +63,9 @@ public sealed class DocumentStoreTests :
 
     [Theory]
     [MemberData(nameof(DocumentStoreFactory))]
-    public async Task CanUpdateAnExistingDocument(Func<IDocumentStore> documentStoreFactory)
+    public async Task CanUpdateAnExistingDocument(Func<DocumentStoreConfiguration, IDocumentStore> documentStoreFactory)
     {
-        var store = documentStoreFactory();
+        var store = documentStoreFactory(_config);
         await store.DeleteAllAsync<TestObjectA>();
 
         var originalObj = _fixture.Create<TestObjectA>();
@@ -76,9 +81,9 @@ public sealed class DocumentStoreTests :
 
     [Theory]
     [MemberData(nameof(DocumentStoreFactory))]
-    public async Task CanDeleteADocument(Func<IDocumentStore> documentStoreFactory)
+    public async Task CanDeleteADocument(Func<DocumentStoreConfiguration, IDocumentStore> documentStoreFactory)
     {
-        var store = documentStoreFactory();
+        var store = documentStoreFactory(_config);
         await store.DeleteAllAsync<TestObjectA>();
 
         var obj = _fixture.Create<TestObjectA>();
@@ -92,9 +97,9 @@ public sealed class DocumentStoreTests :
 
     [Theory]
     [MemberData(nameof(DocumentStoreFactory))]
-    public async Task CanStoreDifferentTypesWithSameId(Func<IDocumentStore> documentStoreFactory)
+    public async Task CanStoreDifferentTypesWithSameId(Func<DocumentStoreConfiguration, IDocumentStore> documentStoreFactory)
     {
-        var store = documentStoreFactory();
+        var store = documentStoreFactory(_config);
         await store.DeleteAllAsync<TestObjectA>();
         await store.DeleteAllAsync<TestObjectB>();
 
@@ -114,9 +119,9 @@ public sealed class DocumentStoreTests :
 
     [Theory]
     [MemberData(nameof(DocumentStoreFactory))]
-    public async Task CanGetAllDocumentsOfATypeAtOnce(Func<IDocumentStore> documentStoreFactory)
+    public async Task CanGetAllDocumentsOfATypeAtOnce(Func<DocumentStoreConfiguration, IDocumentStore> documentStoreFactory)
     {
-        var store = documentStoreFactory();
+        var store = documentStoreFactory(_config);
         await store.DeleteAllAsync<TestObjectA>();
 
         var collection = _fixture.CreateMany<TestObjectA>();
@@ -138,9 +143,9 @@ public sealed class DocumentStoreTests :
 
     [Theory]
     [MemberData(nameof(DocumentStoreFactory))]
-    public async Task CanDeleteAllDocumentsOfATypeAtOnce(Func<IDocumentStore> documentStoreFactory)
+    public async Task CanDeleteAllDocumentsOfATypeAtOnce(Func<DocumentStoreConfiguration, IDocumentStore> documentStoreFactory)
     {
-        var store = documentStoreFactory();
+        var store = documentStoreFactory(_config);
         await store.DeleteAllAsync<TestObjectA>();
 
         var collection = _fixture.CreateMany<TestObjectA>();
@@ -164,9 +169,9 @@ public sealed class DocumentStoreTests :
 
     [Theory]
     [MemberData(nameof(DocumentStoreFactory))]
-    public async Task ThrowsIfDocumentAlreadyExists(Func<IDocumentStore> documentStoreFactory)
+    public async Task ThrowsIfDocumentAlreadyExists(Func<DocumentStoreConfiguration, IDocumentStore> documentStoreFactory)
     {
-        var store = documentStoreFactory();
+        var store = documentStoreFactory(_config);
         await store.DeleteAllAsync<TestObjectA>();
 
         var obj1 = _fixture.Create<TestObjectA>();
@@ -178,9 +183,9 @@ public sealed class DocumentStoreTests :
 
     [Theory]
     [MemberData(nameof(DocumentStoreFactory))]
-    public async Task ThrowsIfDocumentNotExists(Func<IDocumentStore> documentStoreFactory)
+    public async Task ThrowsIfDocumentNotExists(Func<DocumentStoreConfiguration, IDocumentStore> documentStoreFactory)
     {
-        var store = documentStoreFactory();
+        var store = documentStoreFactory(_config);
         await store.DeleteAllAsync<TestObjectA>();
 
         var obj = _fixture.Create<TestObjectA>();
@@ -190,27 +195,55 @@ public sealed class DocumentStoreTests :
 
     [Theory]
     [MemberData(nameof(DocumentStoreFactory))]
-    public async Task ThrowsIfDocumentTypeNotRegistered(Func<IDocumentStore> documentStoreFactory)
+    public async Task ThrowsIfDocumentTypeNotRegistered(Func<DocumentStoreConfiguration, IDocumentStore> documentStoreFactory)
     {
-        var store = documentStoreFactory();
+        var store = documentStoreFactory(_config);
 
         var obj = _fixture.Create<TestObjectC>();
 
         await Assert.ThrowsAsync<TypeNotRegisteredException>(async () => await store.UpdateAsync(obj));
     }
 
+    [Theory]
+    [MemberData(nameof(DocumentStoreFactory))]
+    public async Task UsesGivenSerializer(Func<DocumentStoreConfiguration, IDocumentStore> documentStoreFactory)
+    {
+        var serializer = new FakeSerializer();
+        _config.Serializer = serializer;
+        var store = documentStoreFactory(_config);
+
+        var obj1 = _fixture.Create<TestObjectA>();
+        var obj2 = _fixture.Create<TestObjectA>();
+
+        object? objToSerialize = null;
+        string? strToDeserialize = null;
+        serializer.OnSerialize = x =>
+        {
+            objToSerialize = x;
+            return "{\"value\": \"fake\"}";
+        };
+        serializer.OnDeserialize = x =>
+        {
+            strToDeserialize = x;
+            return obj2;
+        };
+
+        await store.CreateAsync(obj1);
+        var storedObj = await store.GetByIdAsync<TestObjectA>(obj1.Id);
+
+        Assert.Equal(obj1.AsString(), objToSerialize.AsString());
+        Assert.Equal("{\"value\": \"fake\"}", strToDeserialize);
+        Assert.Equal(obj2?.AsString(), storedObj.AsString());
+    }
+
     public static IEnumerable<object[]> DocumentStoreFactory
     {
         get
         {
-            var config = new DocumentStoreConfiguration();
-            config.RegisterDataType<TestObjectA>(x => x.Id);
-            config.RegisterDataType<TestObjectB>(x => x.Id);
-
-            yield return new object[] { new Func<IDocumentStore>(() => _inMemoryStoreFixture!.CreateDocumentStore(config)) };
-            yield return new object[] { new Func<IDocumentStore>(() => _fileStoreFixture!.CreateDocumentStore(config)) };
-            yield return new object[] { new Func<IDocumentStore>(() => _postgreSqlStoreFixture!.CreateDocumentStore(config)) };
-            yield return new object[] { new Func<IDocumentStore>(() => _sqlServerStoreFixture!.CreateDocumentStore(config)) };
+            yield return new object[] { new Func<DocumentStoreConfiguration, IDocumentStore>(config => _inMemoryStoreFixture!.CreateDocumentStore(config)) };
+            yield return new object[] { new Func<DocumentStoreConfiguration, IDocumentStore>(config => _fileStoreFixture!.CreateDocumentStore(config)) };
+            yield return new object[] { new Func<DocumentStoreConfiguration, IDocumentStore>(config => _postgreSqlStoreFixture!.CreateDocumentStore(config)) };
+            yield return new object[] { new Func<DocumentStoreConfiguration, IDocumentStore>(config => _sqlServerStoreFixture!.CreateDocumentStore(config)) };
         }
     }
 

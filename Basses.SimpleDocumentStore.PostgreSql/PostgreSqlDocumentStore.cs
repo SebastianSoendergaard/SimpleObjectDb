@@ -1,5 +1,4 @@
 ﻿using System.Runtime.CompilerServices;
-using System.Text.Json;
 using System.Text.RegularExpressions;
 using Npgsql;
 using NpgsqlTypes;
@@ -22,7 +21,7 @@ public class PostgreSqlDocumentStore : IDocumentStore
     public async Task CreateAsync<Tdata>(Tdata data, CancellationToken cancellationToken = default) where Tdata : class
     {
         var id = _configuration.GetIdFromData(data);
-        var json = JsonSerializer.Serialize(data);
+        var json = _configuration.Serializer.ToJson(data);
         var sql = $"INSERT INTO {GetTableName<Tdata>()} (id, data) values(@id, @data)";
 
         try
@@ -48,7 +47,7 @@ public class PostgreSqlDocumentStore : IDocumentStore
     public async Task UpdateAsync<Tdata>(Tdata data, CancellationToken cancellationToken = default) where Tdata : class
     {
         var id = _configuration.GetIdFromData(data);
-        var json = JsonSerializer.Serialize(data);
+        var json = _configuration.Serializer.ToJson(data);
         var sql = $"UPDATE {GetTableName<Tdata>()} SET data = @data WHERE id = @id";
         int affectedRows = 0;
 
@@ -96,7 +95,7 @@ public class PostgreSqlDocumentStore : IDocumentStore
             {
                 return null;
             }
-            var data = JsonSerializer.Deserialize<Tdata>(json);
+            var data = _configuration.Serializer.FromJson<Tdata>(json);
             return data;
         }
         catch (Exception ex)
@@ -132,7 +131,7 @@ public class PostgreSqlDocumentStore : IDocumentStore
 
         foreach (var json in jsonObjects)
         {
-            var data = JsonSerializer.Deserialize<Tdata>(json);
+            var data = _configuration.Serializer.FromJson<Tdata>(json);
             if (data != null)
             {
                 yield return data;
