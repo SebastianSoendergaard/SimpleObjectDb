@@ -1,7 +1,7 @@
 ﻿using Basses.SimpleDocumentStore.SqlServer;
 using Testcontainers.MsSql;
 
-namespace Basses.SimpleDocumentStore.Tests;
+namespace Basses.SimpleDocumentStore.Tests.Fixtures;
 
 public class SqlServerStoreFixture : IAsyncLifetime
 {

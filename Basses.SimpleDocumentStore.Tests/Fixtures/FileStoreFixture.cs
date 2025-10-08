@@ -1,6 +1,6 @@
 ﻿using Basses.SimpleDocumentStore.Files;
 
-namespace Basses.SimpleDocumentStore.Tests;
+namespace Basses.SimpleDocumentStore.Tests.Fixtures;
 
 public class FileStoreFixture : IDisposable
 {

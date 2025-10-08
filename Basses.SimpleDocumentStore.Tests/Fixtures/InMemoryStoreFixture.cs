@@ -1,6 +1,6 @@
 ﻿using Basses.SimpleDocumentStore.InMemory;
 
-namespace Basses.SimpleDocumentStore.Tests;
+namespace Basses.SimpleDocumentStore.Tests.Fixtures;
 
 public class InMemoryStoreFixture
 {

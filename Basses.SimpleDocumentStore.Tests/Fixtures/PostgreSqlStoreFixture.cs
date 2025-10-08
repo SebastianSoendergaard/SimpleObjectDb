@@ -1,7 +1,7 @@
 ﻿using Basses.SimpleDocumentStore.PostgreSql;
 using Testcontainers.PostgreSql;
 
-namespace Basses.SimpleDocumentStore.Tests;
+namespace Basses.SimpleDocumentStore.Tests.Fixtures;
 
 public class PostgreSqlStoreFixture : IAsyncLifetime
 {
