@@ -1,5 +1,5 @@
-﻿using System.Text.Json;
-using AutoFixture;
+﻿using AutoFixture;
+using Basses.SimpleDocumentStore.Tests.Fixtures;
 
 namespace Basses.SimpleDocumentStore.Tests;
 
@@ -206,7 +206,7 @@ public sealed class DocumentStoreTests :
 
     [Theory]
     [MemberData(nameof(DocumentStoreFactory))]
-    public async Task UsesGivenSerializer(Func<DocumentStoreConfiguration, IDocumentStore> documentStoreFactory)
+    public async Task UsesConfiguredSerializer(Func<DocumentStoreConfiguration, IDocumentStore> documentStoreFactory)
     {
         var serializer = new FakeSerializer();
         _config.Serializer = serializer;
@@ -256,12 +256,4 @@ public sealed class DocumentStoreTests :
     internal record TestSubObjectB(string A, string B, string C, string D, string E);
 
     internal record TestObjectC(int Id, string Text);
-}
-
-internal static class Serializer
-{
-    public static string AsString<T>(this T obj)
-    {
-        return JsonSerializer.Serialize(obj);
-    }
 }

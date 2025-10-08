@@ -40,7 +40,7 @@ public class PostgreSqlDocumentStore : IDocumentStore
         }
         catch (Exception ex)
         {
-            throw new SimpleDocumentStoreException("Could not create object", ex);
+            throw new DocumentStoreException("Could not create object", ex);
         }
     }
 
@@ -63,7 +63,7 @@ public class PostgreSqlDocumentStore : IDocumentStore
         }
         catch (Exception ex)
         {
-            throw new SimpleDocumentStoreException("Could not update object", ex);
+            throw new DocumentStoreException("Could not update object", ex);
         }
 
         if (affectedRows == 0)
@@ -100,7 +100,7 @@ public class PostgreSqlDocumentStore : IDocumentStore
         }
         catch (Exception ex)
         {
-            throw new SimpleDocumentStoreException("Could not get object", ex);
+            throw new DocumentStoreException("Could not get object", ex);
         }
     }
 
@@ -126,7 +126,7 @@ public class PostgreSqlDocumentStore : IDocumentStore
         }
         catch (Exception ex)
         {
-            throw new SimpleDocumentStoreException("Could not get objects", ex);
+            throw new DocumentStoreException("Could not get objects", ex);
         }
 
         foreach (var json in jsonObjects)
@@ -154,7 +154,7 @@ public class PostgreSqlDocumentStore : IDocumentStore
         }
         catch (Exception ex)
         {
-            throw new SimpleDocumentStoreException("Could not delete object", ex);
+            throw new DocumentStoreException("Could not delete object", ex);
         }
     }
 
@@ -172,7 +172,7 @@ public class PostgreSqlDocumentStore : IDocumentStore
         }
         catch (Exception ex)
         {
-            throw new SimpleDocumentStoreException("Could not delete objects", ex);
+            throw new DocumentStoreException("Could not delete objects", ex);
         }
     }
 
@@ -247,7 +247,9 @@ public class PostgreSqlDocumentStore : IDocumentStore
             using var transaction = connection.BeginTransaction();
             foreach (var tableName in tableNames)
             {
-                var sql = $@"CREATE TABLE IF NOT EXISTS public.{tableName} (
+                foreach (var tableName in tableNames)
+                {
+                    var sql = $@"CREATE TABLE IF NOT EXISTS public.{tableName} (
                                 id varchar(50), 
                                 data jsonb,
                                 PRIMARY KEY (id)
@@ -260,7 +262,7 @@ public class PostgreSqlDocumentStore : IDocumentStore
         }
         catch (Exception ex)
         {
-            throw new SimpleDocumentStoreException("Could not create database tables", ex);
+            throw new DocumentStoreException("Could not create database tables", ex);
         }
     }
 }

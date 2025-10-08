@@ -1,27 +1,27 @@
 ﻿namespace Basses.SimpleDocumentStore;
 
-public class SimpleDocumentStoreException : Exception
+public class DocumentStoreException : Exception
 {
-    public SimpleDocumentStoreException(string message) : base(message) { }
-    public SimpleDocumentStoreException(string message, Exception exception) : base(message, exception) { }
+    public DocumentStoreException(string message) : base(message) { }
+    public DocumentStoreException(string message, Exception exception) : base(message, exception) { }
 }
 
-public class TypeNotRegisteredException : SimpleDocumentStoreException
+public class TypeNotRegisteredException : DocumentStoreException
 {
     public TypeNotRegisteredException(string message) : base(message) { }
 }
 
-public class AlreadyExistException : SimpleDocumentStoreException
+public class AlreadyExistException : DocumentStoreException
 {
     public AlreadyExistException(string message) : base(message) { }
 }
 
-public class NotFoundException : SimpleDocumentStoreException
+public class NotFoundException : DocumentStoreException
 {
     public NotFoundException(string message) : base(message) { }
 }
 
-public class DeserializeException : SimpleDocumentStoreException
+public class DeserializeException : DocumentStoreException
 {
     public DeserializeException(string message, Type dataType, string data) : base(message) { }
 }
