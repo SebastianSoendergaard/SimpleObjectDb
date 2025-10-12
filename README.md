@@ -56,74 +56,77 @@ To run the eaxmples spin up docker with the required databases using docker comp
 \SimpleObjectDb>docker-compose up
 ```
 
-#### Perfomance
+#### Performance
 
 The example application will execute some actions against the different database implementations and log the execution times. The actual results will of cause depend a lot on the machine running the application but the test will at least give some hints to how the performance is.
 
 On my machine the output looks like this:
 
 ```
+Creating test objects...
+Created small object: 10000 of 10000
+Created large object: 10 of 10
+Objects created in...                                       00:00:05.0529209
+Setting up store options...                                 00:00:00.4508779
+
+
 ----------------------------------------------------------------------------
 Starting performance test of: InMemoryDocumentStore
 ----------------------------------------------------------------------------
-Creating test objects...                                    00:00:46.1738282
 Executing tests...
-Creating 10000 small items in db...                         00:00:00.0942609
-Fetching 10000 small items from db one by one...            00:00:00.1121761
-Updating 10000 small items in db one by one...              00:00:00.0961932
-Fetching 10000 small items from db at once...               00:00:00.0975406
-Deleting 10000 small items from db one by one...            00:00:00.0022015
-Creating 1000 large items in db...                          00:00:00.3891205
-Updating 1000 large items in db one by one...               00:00:31.8455183
-Deleting 1000 large items from db one by one...             00:00:00.0008345
-Total execution time...                                     00:00:32.6415006
+Creating 10000 small items in db...                         00:00:00.1010524
+Fetching 10000 small items from db one by one...            00:00:00.0851349
+Fetching 10000 small items from db at once...               00:00:00.0659028
+Updating 10000 small items in db one by one...              00:00:00.0255639
+Deleting 10000 small items from db one by one...            00:00:00.0015880
+Creating 10 large items in db...                            00:00:00.0098042
+Updating 10 large items in db one by one...                 00:00:00.0045090
+Deleting 10 large items from db one by one...               00:00:00.0001612
+Total execution time...                                     00:00:03.3944320
 
 
 ----------------------------------------------------------------------------
 Starting performance test of: FileDocumentStore
 ----------------------------------------------------------------------------
-Creating test objects...                                    00:00:33.7969464
 Executing tests...
-Creating 10000 small items in db...                         00:00:04.3093183
-Fetching 10000 small items from db one by one...            00:00:01.9770079
-Updating 10000 small items in db one by one...              00:00:03.7104958
-Fetching 10000 small items from db at once...               00:00:01.6707410
-Deleting 10000 small items from db one by one...            00:00:01.0903333
-Creating 1000 large items in db...                          00:00:02.2315231
-Updating 1000 large items in db one by one...               00:00:37.9731740
-Deleting 1000 large items from db one by one...             00:00:00.1649222
-Total execution time...                                     00:00:52.0405606
+Creating 10000 small items in db...                         00:00:03.9213612
+Fetching 10000 small items from db one by one...            00:00:02.4159106
+Fetching 10000 small items from db at once...               00:00:01.8215434
+Updating 10000 small items in db one by one...              00:00:03.3338303
+Deleting 10000 small items from db one by one...            00:00:00.7678190
+Creating 10 large items in db...                            00:00:00.7777533
+Updating 10 large items in db one by one...                 00:00:00.0129387
+Deleting 10 large items from db one by one...               00:00:00.0024588
+Total execution time...                                     00:00:15.3159066
 
 
 ----------------------------------------------------------------------------
 Starting performance test of: SqlServerDocumentStore
 ----------------------------------------------------------------------------
-Creating test objects...                                    00:00:34.6477269
 Executing tests...
-Creating 10000 small items in db...                         00:00:49.7486642
-Fetching 10000 small items from db one by one...            00:00:36.5893511
-Updating 10000 small items in db one by one...              00:02:04.1255227
-Fetching 10000 small items from db at once...               00:00:00.0716380
-Deleting 10000 small items from db one by one...            00:01:41.5766935
-Creating 1000 large items in db...                          00:01:53.0871979
-Updating 1000 large items in db one by one...               00:00:57.7546790
-Deleting 1000 large items from db one by one...             00:00:06.5644556
-Total execution time...                                     00:06:27.9449130
+Creating 10000 small items in db...                         00:00:58.3278140
+Fetching 10000 small items from db one by one...            00:00:27.7637228
+Fetching 10000 small items from db at once...               00:00:00.0528543
+Updating 10000 small items in db one by one...              00:01:26.9920918
+Deleting 10000 small items from db one by one...            00:01:06.6103734
+Creating 10 large items in db...                            00:01:06.7006505
+Updating 10 large items in db one by one...                 00:00:00.1330521
+Deleting 10 large items from db one by one...               00:00:00.0566897
+Total execution time...                                     00:04:03.0527379
 
 
 ----------------------------------------------------------------------------
 Starting performance test of: PostgreSqlDocumentStore
 ----------------------------------------------------------------------------
-Creating test objects...                                    00:00:46.2382107
 Executing tests...
-Creating 10000 small items in db...                         00:00:34.4647823
-Fetching 10000 small items from db one by one...            00:00:10.8677229
-Updating 10000 small items in db one by one...              00:00:34.8558220
-Fetching 10000 small items from db at once...               00:00:00.0959470
-Deleting 10000 small items from db one by one...            00:00:35.2647267
-Creating 1000 large items in db...                          00:00:48.1886589
-Updating 1000 large items in db one by one...               00:01:05.2419559
-Deleting 1000 large items from db one by one...             00:00:03.9881511
-Total execution time...                                     00:03:17.7075068
+Creating 10000 small items in db...                         00:00:33.6252503
+Fetching 10000 small items from db one by one...            00:00:09.0349484
+Fetching 10000 small items from db at once...               00:00:00.0564641
+Updating 10000 small items in db one by one...              00:00:32.9412380
+Deleting 10000 small items from db one by one...            00:00:32.3691848
+Creating 10 large items in db...                            00:00:32.4661386
+Updating 10 large items in db one by one...                 00:00:00.0890408
+Deleting 10 large items from db one by one...               00:00:00.0594444
+Total execution time...                                     00:01:51.3178134
 
 ```
