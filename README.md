@@ -66,19 +66,26 @@ dotnet package add Basses.SimpleDocumentStore.PostgreSql
 
 Or just copy the required files to your own project. This also allows for local changes if required.
 
+
 ### Examples
 
-For examples of usage see the solution: SimpleObjectDb
+For examples of usage see the solution:
+
+SimpleObjectDb
+- Console application that show examples of usage of all methods and how to control serialization.
+
+SimpleObjectDbWebApi
+- Web API that shows how the document store can be used with DI and how it can be used in different modules by defining the schema
 
 To run the eaxmples spin up docker with the required databases using docker compose:
 
 ```
-\SimpleObjectDb>docker-compose up
+docker-compose up
 ```
 
 #### Performance
 
-The example application will execute some actions against the different database implementations and log the execution times. The actual results will of cause depend a lot on the machine running the application but the test will at least give some hints to how the performance is.
+The SimpleObjectDb example application can execute some actions against the different database implementations and log the execution times. The actual results will of cause depend a lot on the machine running the application but the test will at least give some hints to how the performance is.
 
 On my machine the output looks like this:
 
@@ -148,5 +155,5 @@ Creating 10 large items in db...                            00:00:32.4661386
 Updating 10 large items in db one by one...                 00:00:00.0890408
 Deleting 10 large items from db one by one...               00:00:00.0594444
 Total execution time...                                     00:01:51.3178134
-
 ```
+
