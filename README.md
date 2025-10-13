@@ -8,7 +8,27 @@ The main purpose with this is not to be used in large production systems but mor
 Following a clean architecture the data store can be stubbed by in-memory implementation but sometimes it is still nice to be able to save state between executions.
 
 By using this you will have real persistency without any effort, this gives you time to fully implement your solution while postponing the desision of the actual data storage solution until it is actually needed.
-In some cases you may even find that using this is a sufficient storeage solution. Especially in small application where the performance is not an issue.
+In some cases you may even find that using this is in fact a sufficient storeage solution. Especially in small application with few and simple requirements.
+
+#### Functionality
+
+The following is supported:
+- Create new objects in the store
+- Update existing objects in the store
+- Get objects from the store by Id
+- Get all objects of a given type from the store
+- Delete objects from the store by Id
+- Delete all objects of a give type from the store
+- Control how objects are serialized and deserialized
+- File implementation will automatically create required directories
+- Sql Server and PostgreSQL implementations will automatically create required database, schemas and tables
+
+Some stuff that might be important but NOT supported:
+- Transactions
+- Indexing except for index on Id
+- Searching for anything else than Id
+- Handling of relations between objects
+- Probably more...
 
 ### Implementations
 
