@@ -1,11 +1,12 @@
 # SimpleDocumentStore
+
 Easy way to store objects as documents without messing with any SQL or raw files.
 
 The solution consists of a generic interface that can be used by the application. The interface can be backed by different storage solutions. Currently the solution supports raw files, MS SQL Server and PostgreSql as backing options. An in-memory implementation is also provided for testing purposes.
 
 ### Purpose
-The main purpose with this is not to be used in large production systems but more during development or small simple applications. When developing, focus should be on the requirements and behavior not on data.
-Following a clean architecture the data store can be stubbed by in-memory implementation but sometimes it is still nice to be able to save state between executions.
+
+When developing, focus should be on the requirements and behavior not on data. Following a clean architecture the data store can be stubbed by in-memory implementation but sometimes it is still nice to be able to save state between executions.
 
 By using this you will have real persistency without any effort, this gives you time to fully implement your solution while postponing the desision of the actual data storage solution until it is actually needed.
 In some cases you may even find that using this is in fact a sufficient storeage solution. Especially in small application with few and simple requirements.
@@ -18,7 +19,7 @@ The following is supported:
 - Get objects from the store by Id
 - Get all objects of a given type from the store
 - Delete objects from the store by Id
-- Delete all objects of a give type from the store
+- Delete all objects of a given type from the store
 - Control how objects are serialized and deserialized
 - File implementation will automatically create required directories
 - Sql Server and PostgreSQL implementations will automatically create required database, schemas and tables
@@ -39,10 +40,10 @@ This can be used to easily mock out the actual storage to speed up execution in 
 Stores the objects as files. Each object type has a dedicated folder with one file per object. The object id is used for the filename making it very easy to navigate the filesystem and identify the relevant files.
 
 #### SQL Server
-Uses MS SQL Server as backing database. Each object type has a dedicated table with one row per object. The required database and tables is automatically created.
+Uses MS SQL Server as backing database. Each object type has a dedicated table with one row per object. The required database, schemas and tables is automatically created.
 
 #### PostgreSql
-Uses PostgreSql as backing database. Each object type has a dedicated table with one row per object. The required database and tables is automatically created.
+Uses PostgreSql as backing database. Each object type has a dedicated table with one row per object. The required database, schemas and tables is automatically created.
 
 ### Usage
 
@@ -64,7 +65,7 @@ or for PostgreSQL
 dotnet package add Basses.SimpleDocumentStore.PostgreSql
 ```
 
-Or just copy the required files to your own project. This also allows for local changes if required.
+Or just copy the required files to your own project. This also allows for local changes if needed.
 
 
 ### Examples
